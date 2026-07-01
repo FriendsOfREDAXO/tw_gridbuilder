@@ -1,0 +1,14 @@
+package: tw_gridbuilder
+version: '2.1.0'
+author: 'Friends Of REDAXO'
+supportpage: https://github.com/FriendsOfREDAXO/tw_gridbuilder
+license: MIT
+description:
+    de: TW GridBuilder — Flexibler Tailwind-Grid-Pagebuilder für REDAXO
+requires:
+    redaxo: ^5.15.0
+    php:
+        version: '>=8.1'
+installer_ignore:
+    - .github
+    - .gitignore
