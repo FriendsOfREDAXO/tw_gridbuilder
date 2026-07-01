@@ -3,6 +3,7 @@
  * TW GridBuilder — Modul-Input
  * @version 1.0.1
  */
+/* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */
 
 if (!rex_addon::exists('tw_gridbuilder') || !rex_addon::get('tw_gridbuilder')->isAvailable()) {
     echo '<div class="alert alert-danger">TW GridBuilder-Addon nicht aktiv!</div>';
@@ -13,13 +14,15 @@ if (!rex_addon::exists('tw_gridbuilder') || !rex_addon::get('tw_gridbuilder')->i
 // damit zwei Instanzen auf derselben Seite keine ID-Kollision haben.
 $pb_uid = str_replace('.', '', uniqid('pb', true));
 
-// Verfügbare Module per SQL laden; Pagebuilder-Modul selbst anhand des Namens ausschließen
+// Verfügbare Module per SQL laden; das GridBuilder-Modul selbst wird anhand des
+// Selbst-Markers im eigenen Input-Code ausgeschlossen (siehe Kommentar oben in dieser Datei).
+// NICHT über Modul-ID oder Modul-Namen filtern – diese sind pro Instanz unterschiedlich!
 $pb_modules = [];
 $pb_sql = rex_sql::factory();
 $pb_sql->setQuery(
     'SELECT id, name FROM ' . rex::getTablePrefix() . 'module
-     WHERE input LIKE :marker AND name NOT LIKE :self ORDER BY name ASC',
-    ['marker' => '%/* tw_gridblock kompatibel */%', 'self' => '%tw-gridbuilder%']
+     WHERE input LIKE :marker AND input NOT LIKE :self ORDER BY name ASC',
+    ['marker' => '%/* tw_gridblock kompatibel */%', 'self' => '%/* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */%']
 );
 foreach ($pb_sql as $row) {
     $pb_modules[] = ['id' => (int)$row->getValue('id'), 'name' => $row->getValue('name')];

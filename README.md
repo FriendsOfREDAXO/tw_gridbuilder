@@ -8,10 +8,6 @@ Flexibler Tailwind-Grid-Pagebuilder für REDAXO 5. Ermöglicht das visuelle Aufb
 
 TW GridBuilder generiert Tailwind-Utility-Klassen (Grid, Spacing, Container), benötigt dafür aber keinen eigenen Tailwind-Build-Prozess im Projekt: Alle nötigen Klassen liegen fertig kompiliert in `tw-gridbuilder-grid.css` und lassen sich direkt einbinden. Damit auch für Projekte geeignet, die (noch) keine Tailwind-Toolchain im Einsatz haben.
 
-**Version:** 2.1.0  
-**Lizenz:** MIT  
-**Autor:** Friends Of REDAXO — [github.com/FriendsOfREDAXO/tw_gridbuilder](https://github.com/FriendsOfREDAXO/tw_gridbuilder)
-
 ---
 
 ## Abhängigkeiten

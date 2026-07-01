@@ -1,5 +1,11 @@
 # Changelog — TW GridBuilder
 
+## [2.1.1] — 2026-07-01
+
+### Fixes
+- **Eigenes GridBuilder-Modul erschien in der Modul-Auswahlliste**: Beim Einbetten eines Moduls in eine Zelle (`module/input.php`) wurde das GridBuilder-Modul selbst fälschlich mit ausgewählt, da der Selbst-Ausschluss über einen Namens-Abgleich (`name NOT LIKE '%tw-gridbuilder%'`) erfolgte — abhängig vom exakten Modulnamen in der Backend-Instanz. Umgestellt auf einen dedizierten Marker-Kommentar (`/* tw_gridblock selbst - NICHT LÖSCHEN, ... */`) direkt im Input-Code des GridBuilder-Moduls, der instanzunabhängig per SQL ausgeschlossen wird
+- **`REX_VALUE[id=n output=html]`-Syntax wurde bei eingebetteten Modulen nicht ersetzt**: `Helper::injectValues()` erkannte nur `REX_VALUE[n]` und `REX_VALUE[id=n]`, nicht aber die reguläre REDAXO-Syntax mit Zusatzparametern (z. B. `output=html`), die bei normalen Nicht-mform-Modulen üblich ist. Dadurch blieb der Roh-Token in der gerenderten Ausgabe sichtbar statt durch den gespeicherten Wert ersetzt zu werden. Regex erweitert, um beliebige Zusatzparameter nach der ID zu tolerieren
+
 ## [2.1.0] — 2026-07-01
 
 ### Neu

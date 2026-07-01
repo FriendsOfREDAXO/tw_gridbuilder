@@ -53,9 +53,10 @@ class Helper
             };
         };
 
-        // REX_VALUE[n] und REX_VALUE[id=n] → gespeicherter Wert
+        // REX_VALUE[n], REX_VALUE[id=n] und REX_VALUE[id=n output=html ...] → gespeicherter Wert
+        // (REDAXO erlaubt bei Nicht-mform-Modulen zusätzliche Parameter nach der ID, z.B. "output=html")
         $code = preg_replace_callback(
-            "/(['\"]?)REX_VALUE\[(?:id=)?(\d+)\](['\"]?)/",
+            "/(['\"]?)REX_VALUE\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
             static function (array $m) use ($resolveValue): string {
                 return var_export($resolveValue((int) $m[2]), true);
             },
