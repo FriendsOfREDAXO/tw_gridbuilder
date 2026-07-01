@@ -1,5 +1,17 @@
 # Changelog — TW GridBuilder
 
+## [2.1.4] — 2026-07-01
+
+### Fixes
+- **`REX_LINK[n]` (Linkmap-Felder, z. B. `MForm::addLinkField()`) wurde komplett ignoriert**: Weder beim Speichern noch beim Rendern gab es eine Behandlung für diesen REDAXO-Variablentyp. Folge: Linkauswahl in eingebetteten Modulen ging beim Speichern kommentarlos verloren, und im Live-Output blieb der rohe `REX_LINK[n]`-Token als Text sichtbar. In 23 Theme-Modulen genutzt. `TwGridBuilderApi.php` namespaced jetzt `REX_INPUT_LINK[n]` analog zu `REX_INPUT_MEDIA[n]` (→ `__link_n`), `TwGridBuilderHelper::injectValues()` löst `REX_LINK[n]` beim Rendern auf
+- **`REX_MEDIA[id=n ...]`-Syntax mit Zusatzparametern wurde beim Rendern nicht erkannt**: Analog zum `REX_VALUE[id=n output=html]`-Fix aus 2.1.1 fehlte die gleiche Toleranz bei `REX_MEDIA` (z. B. `REX_MEDIA[id=1 widget=1]`), Regex entsprechend erweitert
+- Geprüft, welche REDAXO-`rex_var`-Typen in den Theme-Modulen tatsächlich vorkommen (`REX_VALUE`, `REX_MEDIA`, `REX_LINK`); `REX_LINKLIST`, `REX_MEDIALIST`, `REX_ARTICLE`, `REX_CATEGORY` etc. werden aktuell nirgends verwendet und daher bewusst nicht unterstützt
+
+## [2.1.3] — 2026-07-01
+
+### Fixes
+- **Bare `REX_VALUE[n]`-Tokens im HTML-Text wurden fälschlich mit PHP-Quotes umschlossen**: `Helper::injectValues()` ersetzte jedes Token grundsätzlich per `var_export()`, also mit umschließenden Anführungszeichen. Das ist nur korrekt, wenn das Token innerhalb eines PHP-String-Literals steht (z. B. `$align = "REX_VALUE[3]";`). Steht das Token dagegen bare im HTML-Text (z. B. `<div>REX_VALUE[id=1 output=html]</div>` im Mehrspalter-Modul) oder wird sogar als dynamischer Tag-Name verwendet (`<REX_VALUE[2] class="...">` im Überschriften-Modul H2-H6), landeten sichtbare Anführungszeichen/Escape-Backslashes im gerenderten HTML bzw. das Tag wurde komplett ungültig (`<'h2' ...>`). `injectValues()` erkennt jetzt, ob das Token bereits von Anführungszeichen umschlossen war, und setzt den Rohwert nur dann ungequotet ein, wenn keine Anführungszeichen vorhanden waren. Betroffen: Module „Mehrspalter/Editor" und „Überschriften H2-H6"
+
 ## [2.1.1] — 2026-07-01
 
 ### Fixes

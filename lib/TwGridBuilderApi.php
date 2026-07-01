@@ -79,6 +79,10 @@ class Api extends \rex_api_function
         // REX_MEDIA[n] in value-Attributen → leer ersetzen (MForm setzt Token als Platzhalter;
         // verhindert 404 beim Preview-Load und wird via prefillForm mit echtem Wert befüllt)
         $html = preg_replace('/\bREX_MEDIA\[(\d+)\]/i', '', $html);
+        // REX_INPUT_LINK[n] (addLinkField, z.B. hidden field des Linkmap-Widgets) → als __link_n speichern
+        $html = preg_replace('/\bREX_INPUT_LINK\[(\d+)\]/i',    $ns . '[__link_$1]', $html);
+        // REX_LINK[n] in value-Attributen → leer ersetzen (analog REX_MEDIA; echter Wert kommt via prefillForm)
+        $html = preg_replace('/\bREX_LINK\[(\d+)\]/i', '', $html);
 
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['html' => $html], JSON_UNESCAPED_UNICODE);

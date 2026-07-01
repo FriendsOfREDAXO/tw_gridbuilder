@@ -55,25 +55,45 @@ class Helper
 
         // REX_VALUE[n], REX_VALUE[id=n] und REX_VALUE[id=n output=html ...] → gespeicherter Wert
         // (REDAXO erlaubt bei Nicht-mform-Modulen zusätzliche Parameter nach der ID, z.B. "output=html")
+        // Steht das Token in PHP-String-Anführungszeichen ("REX_VALUE[1]"), wird ein
+        // quotiertes PHP-Literal eingesetzt. Steht es bare im HTML-Text (z.B. <div>REX_VALUE[id=1 output=html]</div>
+        // oder als dynamischer Tag-Name <REX_VALUE[2]>), muss der Rohwert ohne PHP-Quoting eingesetzt werden -
+        // sonst landen sichtbare Anführungszeichen/Escape-Backslashes im gerenderten HTML.
         $code = preg_replace_callback(
             "/(['\"]?)REX_VALUE\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
             static function (array $m) use ($resolveValue): string {
-                return var_export($resolveValue((int) $m[2]), true);
+                $val = $resolveValue((int) $m[2]);
+                return ($m[1] !== '' && $m[3] !== '') ? var_export($val, true) : $val;
             },
             $code
         );
-        // REX_MEDIA[n] → Dateiname aus __media_n (via addMediaField mit numerischer ID)
+        // REX_MEDIA[n], REX_MEDIA[id=n ...] → Dateiname aus __media_n (via addMediaField)
         $code = preg_replace_callback(
-            "/(['\"]?)REX_MEDIA\[(\d+)\](['\"]?)/",
+            "/(['\"]?)REX_MEDIA\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
             static function (array $m) use ($values): string {
-                $key = '__media_' . (int) $m[2];
-                $raw = $values[$key] ?? $values[(string) $key] ?? '';
-                // Sanitize: unreplaced REX tokens aus alten Saves bereinigen
-                $val = preg_match('/^REX_[A-Z_]+\[\d+\]$/i', (string) $raw) ? '' : (string) $raw;
-                return var_export($val, true);
+                $val = self::resolveSanitized($values, '__media_' . (int) $m[2]);
+                return ($m[1] !== '' && $m[3] !== '') ? var_export($val, true) : $val;
+            },
+            $code
+        );
+        // REX_LINK[n], REX_LINK[id=n ...] → gespeicherte Artikel-ID aus __link_n (via addLinkField)
+        $code = preg_replace_callback(
+            "/(['\"]?)REX_LINK\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
+            static function (array $m) use ($values): string {
+                $val = self::resolveSanitized($values, '__link_' . (int) $m[2]);
+                return ($m[1] !== '' && $m[3] !== '') ? var_export($val, true) : $val;
             },
             $code
         );
         return $code;
+    }
+
+    /**
+     * Liest $values[$key] und entfernt unersetzte REX_*[n]-Platzhalter aus alten Saves.
+     */
+    private static function resolveSanitized(array $values, string $key): string
+    {
+        $raw = $values[$key] ?? '';
+        return preg_match('/^REX_[A-Z_]+\[\d+\]$/i', (string) $raw) ? '' : (string) $raw;
     }
 }
