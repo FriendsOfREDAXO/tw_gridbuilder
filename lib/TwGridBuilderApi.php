@@ -58,9 +58,18 @@ class Api extends \rex_api_function
         $_GET['function'] = 'add';
         unset($_POST['REX_INPUT_VALUE'], $_REQUEST['REX_INPUT_VALUE']);
 
+        // Context 'module' + Stub-contextData sind nötig, damit rex_var_media/-value/-link
+        // ihre Widgets rendern (getOutput() bricht sonst mit return false ab und der Token
+        // bleibt als roher Text stehen). Der Stub liefert für alle REX_*-Werte leer -
+        // die echten Werte werden clientseitig via prefillForm() im __media_/__link_-Namespace gesetzt.
+        $stub = new class extends \rex_sql {
+            public function __construct() {}
+            public function getValue($column) { return ''; }
+        };
+
         ob_start();
         try {
-            $inputCode = \rex_var::parse($moduleInput, \rex_var::ENV_INPUT, null, null);
+            $inputCode = \rex_var::parse($moduleInput, \rex_var::ENV_INPUT, 'module', $stub);
             eval('?>' . $inputCode);
         } catch (\Throwable $e) {
             echo '<div class="alert alert-warning">Fehler: ' . htmlspecialchars($e->getMessage()) . '</div>';

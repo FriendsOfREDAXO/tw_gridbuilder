@@ -289,7 +289,7 @@ Eine Sicherheitsprüfung (Input-Validierung, XSS, CSRF, API-Zugriffe) wurde am 2
 
 - **Teilweise theme-abhängig:** Projektspezifische Tailwind-Klassen (z.B. `bg-primary-500`, `bg-secondary-50`) kommen aus dem kompilierten Tailwind-Build des Themes. Alle strukturellen Klassen (Grid, Abstände, Container, video-docker) sind vollständig in `tw-gridbuilder-grid.css` enthalten.
 - Modul-Input muss MForm-kompatibel sein
-- CKEditor 5 wird unterstützt; andere Rich-Text-Editoren nicht getestet
+- CKEditor 5 (`cke5`) und CKEditor 4 (`ckeditor`) werden unterstützt; `redactor` und andere Rich-Text-Editoren nicht getestet
 
 ---
 

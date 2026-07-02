@@ -1,5 +1,12 @@
 # Changelog — TW GridBuilder
 
+## [2.1.5] — 2026-07-02
+
+### Fixes
+- **Media-/Link-Widgets (`REX_MEDIA[id=n widget=1]`) wurden im eingebetteten Modul-Formular nicht gerendert**: Der Token blieb als roher Text stehen, der Mediapool ließ sich gar nicht öffnen. Ursache: `TwGridBuilderApi` rief `rex_var::parse()` mit `context = null` auf. `rex_var_media::getOutput()` (und analog `rex_var_link`) rendert das Widget aber nur, wenn der Parse-Context `'module'` bzw. `'action'` ist — sonst `return false` → Token unverändert. Betroffen war jedes Modul mit echtem Media-/Link-**Widget** (z. B. Theme-Modul „Einzelbild", id 43); Module mit reinen `REX_VALUE`-Feldern liefen, weil diese keinen Context-Check haben. Fix: `parse()` erhält jetzt `context = 'module'` und ein Stub-`contextData`-Objekt (liefert für alle REX_*-Werte leer; die echten Werte kommen clientseitig über `prefillForm()` im `__media_`/`__link_`-Namespace)
+- **Bilder in der Zell-Vorschau wurden nicht angezeigt**: `.pb-cell-preview img { display: none; }` (mit Ausnahme nur für `.form-horizontal img`) blendete alle Inhaltsbilder aus — ein Relikt aus der Zeit, als der Preview noch das Input-Formular zeigte. Der Preview rendert inzwischen den echten Modul-**Output** (z. B. `<div class="singleImage"><img>`), dessen Bilder außerhalb von `.form-horizontal` liegen. Regel ersetzt durch `.pb-cell-preview img { display: block; max-width: 100%; width: auto; height: auto; }` — Bilder werden sichtbar und füllen die Zellbreite (statt auf 120px Höhe gedeckelt)
+- **CKEditor-4-Inhalte (`ckeditor`-Addon, Textarea mit `class="ckeditor"`) gingen beim Speichern verloren**: Der GridBuilder synchronisierte und zerstörte nur `cke5`-Editoren; CKEditor 4 hält seinen Inhalt in einer eigenen Instanz und schreibt ihn nur bei `updateElement()` in die Textarea zurück. Da `collectFromDom()` die (noch leere) Textarea direkt las, wurde beim Speichern nichts übernommen. Zusätzlich brach `syncCke5ToTextareas()` früh ab, wenn `cke5_destroy` fehlte. Fix: Funktion umbenannt zu `syncEditorsToTextareas()`, behandelt cke5 und CKEditor 4 unabhängig (CKE4 via `CKEDITOR.instances[...].updateElement()`, Match über DOM-Containment statt Element-ID). `setFormHtml()` zerstört jetzt auch CKE4-Instanzen (`destroy(true)`) vor dem DOM-Austausch, um Instanz-Namenskollisionen zu vermeiden. Betrifft Theme-Modul „Mehrspalter/Editor" (id 41)
+
 ## [2.1.4] — 2026-07-01
 
 ### Fixes

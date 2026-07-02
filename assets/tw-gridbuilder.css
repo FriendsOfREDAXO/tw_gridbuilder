@@ -318,8 +318,10 @@ body.rex-theme-dark .pb-panel {
   overflow: hidden;
 }
 .pb-cell-preview * { max-width: 100% !important; }
-.pb-cell-preview img { display: none; }
-.pb-cell-preview .form-horizontal img { display: inline-block; max-height: 120px; width: auto; }
+/* Bilder in der Modul-Output-Vorschau anzeigen (z. B. Einzelbild-Modul <div class="singleImage"><img>).
+   Frueher pauschal display:none, weil der Preview mal das Input-Formular zeigte - jetzt rendert er den
+   echten Output, dessen Inhaltsbilder sichtbar sein muessen. */
+.pb-cell-preview img { display: block; max-width: 100%; width: auto; height: auto; }
 .pb-cell-preview-expanded {
   max-height: none !important;
   max-height: none !important;

@@ -32,6 +32,16 @@
         window.cke5_destroy(window.jQuery ? window.jQuery(ta) : ta);
       });
     }
+    // CKEditor 4 (ckeditor-Addon): Instanzen im alten Container zerstoeren,
+    // sonst kollidieren beim Neu-Init die Instanznamen ("editor already exists").
+    if (window.CKEDITOR && CKEDITOR.instances) {
+      Object.keys(CKEDITOR.instances).forEach((name) => {
+        const inst = CKEDITOR.instances[name];
+        if (inst && inst.element && inst.element.$ && el.contains(inst.element.$)) {
+          try { inst.destroy(true); } catch (e) {}
+        }
+      });
+    }
     el.innerHTML = html;
     // Werte VOR rex:ready/initWidgets setzen, damit Media-Widgets korrekte Initialwerte lesen
     if (prefillCallback) prefillCallback(el);
@@ -436,12 +446,24 @@
     }
 
     // ── Serialisierung ────────────────────────────────────────────────────────
-    function syncCke5ToTextareas(container) {
-      if (!container || typeof window.cke5_destroy !== 'function') return;
-      container.querySelectorAll('.cke5-editor[data-cke5-init-state="ready"]').forEach((el) => {
-        // cke5_destroy syncs editor content to textarea before destroying
-        window.cke5_destroy(window.jQuery ? window.jQuery(el) : el);
-      });
+    function syncEditorsToTextareas(container) {
+      if (!container) return;
+      // cke5-Addon: cke5_destroy synct Inhalt in die Textarea (und zerstoert die Instanz)
+      if (typeof window.cke5_destroy === 'function') {
+        container.querySelectorAll('.cke5-editor[data-cke5-init-state="ready"]').forEach((el) => {
+          window.cke5_destroy(window.jQuery ? window.jQuery(el) : el);
+        });
+      }
+      // ckeditor-Addon (CKEditor 4): haelt Inhalt in eigener Instanz, schreibt ihn nur bei
+      // updateElement() in die Textarea zurueck - sonst liest collectFromDom eine leere Textarea.
+      if (window.CKEDITOR && CKEDITOR.instances) {
+        Object.keys(CKEDITOR.instances).forEach((name) => {
+          const inst = CKEDITOR.instances[name];
+          if (inst && inst.element && inst.element.$ && container.contains(inst.element.$)) {
+            try { inst.updateElement(); } catch (e) {}
+          }
+        });
+      }
     }
 
     function collectFromDom() {
@@ -449,7 +471,7 @@
       if (!slot || !slot.module_id || !panel.cell) return;
       const container = document.getElementById(FORM_CONTAINER_ID(mountId));
       if (!container) return;
-      syncCke5ToTextareas(container);
+      syncEditorsToTextareas(container);
 
       const ns = panel.cell.id + '_' + slot.id;
       const prefix = `REX_INPUT_VALUE[twgb][${ns}]`;
