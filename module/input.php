@@ -1,7 +1,7 @@
 <?php
 /**
  * TW GridBuilder — Modul-Input
- * @version 1.0.1
+ * @version 2.2.0
  */
 /* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */
 
@@ -38,49 +38,18 @@ if ($pb_raw !== '' && $pb_raw !== $pb_sentinel) {
 }
 if (!isset($pb_data['rows'])) $pb_data = ['rows' => []];
 
-// Modul-Output für Preview rendern
-if (!function_exists('pb_render_preview')) :
-function pb_render_preview(int $module_id, array $values): string
-{
-    $sql = rex_sql::factory();
-    $sql->setQuery(
-        'SELECT output FROM ' . rex::getTablePrefix() . 'module WHERE id = :id LIMIT 1',
-        ['id' => $module_id]
-    );
-    if ($sql->getRows() === 0) return '';
-
-    $code = preg_replace_callback(
-        "/(['\"]?)REX_VALUE\[(\d+)\](['\"]?)/",
-        static function (array $m) use ($values): string {
-            $n   = (int) $m[2];
-            $val = $values[$n] ?? $values[(string) $n] ?? null;
-            $str = match (true) {
-                $val === null  => '',
-                is_array($val) => json_encode($val, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-                default        => (string) $val,
-            };
-            return var_export($str, true);
-        },
-        $sql->getValue('output')
-    );
-    ob_start();
-    try {
-        eval('?>' . $code);
-    } catch (\Throwable $e) {
-        ob_end_clean();
-        return '<p style="color:#ef4444;font-size:11px;">⚠ ' . htmlspecialchars($e->getMessage()) . '</p>';
-    }
-    return ob_get_clean();
-}
-endif;
-
-// Previews in $pb_data einbauen
+// Previews in $pb_data einbauen.
+// Nutzt dieselbe Token-Ersetzung wie Frontend/AJAX (Helper::renderModule) — eine
+// einzige Quelle für die Modul-Wert-Auflösung (REX_VALUE/MEDIA/LINK inkl. Parameter).
 foreach ($pb_data['rows'] as &$pb_row) {
-    foreach ($pb_row['cells'] as &$pb_cell) {
+    foreach ($pb_row['cells'] ?? [] as &$pb_cell) {
         $pb_preview = '';
         foreach ($pb_cell['modules'] ?? [] as $pb_slot) {
             if (!empty($pb_slot['module_id'])) {
-                $pb_preview .= pb_render_preview((int)$pb_slot['module_id'], $pb_slot['values'] ?? []);
+                $pb_preview .= \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule(
+                    (int)$pb_slot['module_id'],
+                    $pb_slot['values'] ?? []
+                );
             }
         }
         $pb_cell['preview'] = $pb_preview;
@@ -113,6 +82,7 @@ $output_id  = 'twgb-layout-' . $pb_uid;
                 initialData: <?= json_encode($pb_data,    JSON_UNESCAPED_UNICODE) ?>,
                 ajaxUrl:     <?= json_encode($ajax_url,   JSON_UNESCAPED_UNICODE) ?>,
                 csrfToken:   <?= json_encode($csrf_token) ?>,
+                csrfField:   <?= json_encode(rex_csrf_token::PARAM) ?>,
             });
         }
     }, 50);

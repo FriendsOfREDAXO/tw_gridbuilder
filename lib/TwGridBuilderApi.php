@@ -22,6 +22,12 @@ class Api extends \rex_api_function
             throw new \rex_api_exception('Access denied');
         }
 
+        // CSRF-Schutz: Token wird in module/input.php via rex_csrf_token::factory('twgb_load_module')
+        // erzeugt und vom Client (apiPost) unter rex_csrf_token::PARAM mitgeschickt.
+        if (!\rex_csrf_token::factory('twgb_load_module')->isValid()) {
+            throw new \rex_api_exception('CSRF token invalid');
+        }
+
         // Preview-Modus: rendert alle Module einer Zelle als HTML
         if (\rex_request('twgb_preview', 'int', 0)) {
             $cell    = json_decode(\rex_request('cell_data', 'string', '{}'), true) ?: [];

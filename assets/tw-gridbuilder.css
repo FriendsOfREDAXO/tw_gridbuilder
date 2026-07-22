@@ -186,12 +186,12 @@ body.rex-theme-dark .pb-panel {
 /* ── Column Picker ── */
 .pb-col-picker { display: flex; gap: 3px; margin-left: 6px; }
 .pb-col-btn {
-  width: 26px; height: 26px;
+  width: 28px; height: 28px;
   border: 1px solid var(--pb-border-2);
   border-radius: 5px;
   background: var(--pb-bg);
-  color: var(--pb-text-3);
-  font-size: 12px; font-weight: 700;
+  color: var(--pb-text-2);
+  font-size: 13px; font-weight: 700;
   cursor: pointer;
   transition: all .12s;
 }
@@ -207,11 +207,14 @@ body.rex-theme-dark .pb-panel {
   border-left: 1px solid var(--pb-border);
 }
 .pb-preset-btn {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
   border: 1px solid var(--pb-border);
   border-radius: 5px;
   background: var(--pb-bg);
-  color: var(--pb-text-3);
+  color: var(--pb-text-2);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -224,20 +227,60 @@ body.rex-theme-dark .pb-panel {
 /* ── Row Actions ── */
 .pb-row-actions { margin-left: auto; display: flex; gap: 4px; }
 .pb-icon-btn {
-  padding: 4px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
   border: 1px solid var(--pb-border);
   border-radius: 5px;
   background: var(--pb-bg);
-  color: var(--pb-text-3);
-  font-size: 13px;
+  color: var(--pb-text-2);
+  font-size: 16px;
+  line-height: 1;
   cursor: pointer;
   transition: all .12s;
 }
-.pb-icon-btn:hover { border-color: var(--pb-border-2); color: var(--pb-text-2); }
+.pb-icon-btn:hover { border-color: var(--pb-border-2); color: var(--pb-text); }
 .pb-icon-btn:disabled { opacity: .35; cursor: default; }
 .pb-icon-btn.active { background: var(--pb-accent-bg); border-color: var(--pb-accent); color: var(--pb-accent); }
 .pb-icon-btn.danger { color: var(--pb-danger); border-color: var(--pb-danger-bd); }
 .pb-icon-btn.danger:hover { background: var(--pb-danger-bg); }
+
+/* Zell-Aktionsleiste im Panel (Duplizieren/Kopieren/Einfügen) */
+.pb-cell-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 10px 0 4px;
+  padding-right: 6px;
+}
+.pb-cell-actions .btn-xs {
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+/* Toast-Benachrichtigung */
+.pb-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 100000;
+  padding: 9px 18px;
+  border-radius: 8px;
+  background: var(--pb-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  pointer-events: none;
+}
+.pb-toast-fade-enter-active, .pb-toast-fade-leave-active { transition: opacity .25s, transform .25s; }
+.pb-toast-fade-enter-from, .pb-toast-fade-leave-to { opacity: 0; transform: translate(-50%, 10px); }
 
 /* ── Row Meta Tags ── */
 .pb-row-meta {
@@ -451,6 +494,7 @@ body.rex-theme-dark .pb-panel {
   margin-bottom: 6px;
 }
 .pb-panel-section-row .pb-label { margin-bottom: 0; width: 165px; flex-shrink: 0; white-space: nowrap; }
+.pb-hint { display: block; margin-top: 5px; font-size: 11px; line-height: 1.4; color: var(--pb-text-3); }
 
 .pb-select {
   width: 100%;
@@ -735,6 +779,25 @@ body:not(.rex-theme-light) .pb-panel select.form-control {
   font-size: 14px;
   line-height: 1.5;
 }
+/* Modul-Namens-Label mit integrierter Trennlinie:
+   die gestrichelte Linie läuft von links bis zum rechtsbündigen Label. */
+.twgb-be-module-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--pb-text-3);
+}
+.twgb-be-module-label::before {
+  content: "";
+  flex: 1 1 auto;
+  border-top: 1px dashed var(--pb-border);
+}
+.twgb-be-module + .twgb-be-module { margin-top: 12px; }
 .twgb-be-cell table { width: 100%; border-collapse: collapse; }
 .twgb-be-cell td, .twgb-be-cell th { padding: 2px 6px; }
 .twgb-be-cell td:first-child, .twgb-be-cell th:first-child { font-size: 12px; color: var(--pb-text-muted); }
@@ -772,4 +835,23 @@ body:not(.rex-theme-light) .pb-panel select.form-control {
   inset: 0;
   background: var(--pb-overlay);
   z-index: 9998;
+}
+
+/* ── CKEditor5 im Panel ──
+   Das Panel liegt bei z-index 9999. CKEditor5 hängt seine schwebende UI
+   (Link-Balloon, Dropdowns, Dialoge) ans document.body mit Standard-z-index
+   (--ck-z-default:1 → --ck-z-modal ~1000). Dadurch landen die Balloons HINTER
+   dem Panel und sind unsichtbar ("Modal kommt nicht"). Hier heben wir die
+   CKEditor-Ebenen über das Panel. --ck-z-panel = neuere CKEditor-Versionen,
+   --ck-z-modal = ältere; beide gesetzt. */
+:root {
+  --ck-z-default: 10000;
+  --ck-z-panel: calc(var(--ck-z-default) + 999);
+  --ck-z-modal: calc(var(--ck-z-default) + 999);
+}
+.ck-body-wrapper,
+.ck.ck-balloon-panel,
+.ck.ck-dialog-overlay,
+.ck.ck-dialog {
+  z-index: 11000 !important;
 }

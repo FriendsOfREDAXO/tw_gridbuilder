@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 1.0.1
+ * @version 2.2.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -90,7 +90,18 @@ if (rex::isBackend()) {
                     $pb_mid  = (int)($pb_slot['module_id'] ?? 0);
                     $pb_vals = $pb_slot['values'] ?? [];
                     if (!$pb_mid) continue;
+                    // Modulname für das Label (statisch gecacht, um Mehrfach-Queries zu vermeiden)
+                    static $pb_mnames = [];
+                    if (!array_key_exists($pb_mid, $pb_mnames)) {
+                        $pb_nsql = rex_sql::factory();
+                        $pb_nsql->setQuery('SELECT name FROM ' . rex::getTablePrefix() . 'module WHERE id = :id LIMIT 1', ['id' => $pb_mid]);
+                        $pb_mnames[$pb_mid] = $pb_nsql->getRows() ? (string) $pb_nsql->getValue('name') : ('Modul ' . $pb_mid);
+                    }
+                    // Jedes Modul einzeln umschließen → optische Trennung + Namens-Label
+                    echo '<div class="twgb-be-module">';
+                    echo '<div class="twgb-be-module-label">' . htmlspecialchars($pb_mnames[$pb_mid]) . '</div>';
                     echo \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule($pb_mid, $pb_vals);
+                    echo '</div>';
                 }
             }
             echo '</div>';
@@ -100,12 +111,6 @@ if (rex::isBackend()) {
     echo '</div>';
     return;
 }
-
-// Container-Klassen-Mapping (Tailwind)
-$containerMap = [
-    'standard' => 'container mx-auto px-4',
-    'full'     => 'w-full px-4',
-];
 
 // Helfer: responsive Spacing-Klasse (base / md / lg)
 // md-Klasse wird nur gesetzt wenn abweichend von base, lg nur wenn abweichend von md
@@ -135,11 +140,14 @@ function pb_bg_image_style(string $filename): string {
 endif;
 
 foreach ($pb_data['rows'] as $row) {
-    $cw_setting    = $row['content_width'] ?? 'standard';
-    $container     = $cw_setting === 'standard'
-        ? 'container mx-auto px-4'
-        : ($containerMap[$row['container'] ?? 'standard'] ?? 'container mx-auto px-4');
-    $content_width = $cw_setting === 'full' ? 'w-full' : '';
+    // Zwei unabhängige Layout-Achsen:
+    //  - container='full'      → Hintergrund/Section randlos über die volle Browserbreite
+    //  - content_width='full'  → Inhalt randlos statt im zentrierten Container.
+    // content_width wirkt nur bei container='full' sichtbar; bei container='standard'
+    // bleibt der Inhalt im zentrierten Container (die UI deaktiviert das Feld dann).
+    $container_full = ($row['container'] ?? 'standard') === 'full';
+    $content_full   = ($row['content_width'] ?? 'standard') === 'full';
+    $inner_width    = ($container_full && $content_full) ? 'w-full px-4' : 'container mx-auto px-4';
     $py_top_base   = (string)($row['py_top']        ?? '3');
     $py_top_md     = (string)($row['py_top_md']    ?? $py_top_base);
     $py_top_lg     = (string)($row['py_top_lg']    ?? $py_top_md);
@@ -157,9 +165,8 @@ foreach ($pb_data['rows'] as $row) {
     $mobile_rev    = !empty($row['mobile_reverse']);
 
     // Hintergrund auf Section (volle Breite) oder auf Container (begrenzte Breite)?
-    // Entscheidung anhand des Container-Dropdowns, nicht der berechneten $container-Variable
-    // ($container wird durch content_width='standard' immer auf 'container mx-auto px-4' gesetzt)
-    $bg_on_section = ($row['container'] ?? 'standard') === 'full';
+    // Entscheidung allein anhand des Container-Dropdowns.
+    $bg_on_section = $container_full;
 
     $section_classes = implode(' ', array_filter([
         'pb-section',
@@ -171,8 +178,7 @@ foreach ($pb_data['rows'] as $row) {
     ]));
 
     $container_classes = implode(' ', array_filter([
-        $container,
-        $content_width,
+        $inner_width,
         !$bg_on_section ? $bg : '',
         !$bg_on_section && $bg_video ? 'relative z-10' : '',
     ]));

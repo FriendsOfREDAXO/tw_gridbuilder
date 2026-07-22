@@ -4,9 +4,11 @@ Flexibler Tailwind-Grid-Pagebuilder für REDAXO 5. Ermöglicht das visuelle Aufb
 
 ---
 
-**Nicht nur für Tailwind Nutzer**
+**Setzt einen Tailwind-v4-Build voraus**
 
-TW GridBuilder generiert Tailwind-Utility-Klassen (Grid, Spacing, Container), benötigt dafür aber keinen eigenen Tailwind-Build-Prozess im Projekt: Alle nötigen Klassen liegen fertig kompiliert in `tw-gridbuilder-grid.css` und lassen sich direkt einbinden. Damit auch für Projekte geeignet, die (noch) keine Tailwind-Toolchain im Einsatz haben.
+TW GridBuilder generiert Tailwind-Utility-Klassen (Grid, Spacing, Container, Hintergrundfarben). Ab Version 2.2.0 werden diese Klassen **vom Tailwind-Build des Projekts erzeugt** (Farben stammen aus den Theme-Variablen, Responsive-Varianten funktionieren korrekt), nicht mehr als vorkompilierte, unlayered Utilities mitgeliefert. `tw-gridbuilder-grid.css` enthält dazu eine Tailwind-`@source inline(...)`-Safelist plus die wenigen echten Custom-Klassen (Video-Hintergrund, Mobile-Reihenfolge). Voraussetzung ist daher, dass die Datei per `@import` in einen **Tailwind-v4-Build** eingebunden ist — siehe „Grid-CSS in den Build-Prozess einbinden".
+
+> Hintergrund des Umbaus: Die früher mitgelieferten generischen Utilities (`.flex`, `.gap-*`, `.container` …) waren *unlayered* CSS und überschrieben in Tailwind-Projekten die `@layer`-Utilities — dadurch griffen Responsive-Varianten wie `lg:hidden` nicht mehr. Der Safelist-Ansatz beseitigt diese Kollision.
 
 ---
 
@@ -38,7 +40,7 @@ tw_gridbuilder selbst rendert reines HTML/CSS (Grid, Spacing, Container) — kei
 |---|---|
 | `assets/tw-gridbuilder.js` | Vue 3 (via REDAXO-Backend-CDN), gesamte Pagebuilder-UI |
 | `assets/tw-gridbuilder.css` | Backend-Styles für den Editor |
-| `assets/tw-gridbuilder-grid.css` | Grid- und Layout-CSS für das Frontend (nicht automatisch eingebunden, siehe „Grid-CSS in den Build-Prozess einbinden") |
+| `assets/tw-gridbuilder-grid.css` | Frontend-CSS: Tailwind-`@source`-Safelist der dynamischen Utilities + Custom-Klassen (Video-Hintergrund, Mobile-Reihenfolge). Muss per `@import` in den Tailwind-v4-Build eingebunden werden — siehe „Grid-CSS in den Build-Prozess einbinden" |
 
 ---
 
@@ -61,7 +63,7 @@ tw_gridbuilder/
 ├── assets/
 │   ├── tw-gridbuilder.js          # Backend-UI (Vue 3)
 │   ├── tw-gridbuilder.css         # Backend-Styles
-│   └── tw-gridbuilder-grid.css    # Frontend-Grid- und Layout-CSS (vollständig, kein Tailwind-Build nötig)
+│   └── tw-gridbuilder-grid.css    # Safelist (@source) + Custom-CSS; benötigt Tailwind-v4-Build
 ├── lib/
 │   ├── TwGridBuilderApi.php       # AJAX-API: Modul-Formulare & Previews
 │   └── TwGridBuilderHelper.php    # REX_VALUE/REX_MEDIA Token-Auflösung
@@ -225,27 +227,27 @@ Jede Zeile und jede Zelle bekommt im Frontend zusätzlich zu den Layout-Utility-
 
 ## Grid-CSS in den Build-Prozess einbinden
 
-Die Datei `assets/tw-gridbuilder-grid.css` (~12 KB) enthält alle Grid-, Spacing- und Layout-Klassen die der Pagebuilder dynamisch generiert. Sie wird **nicht automatisch** im Frontend eingebunden, um volle Kontrolle über Ladezeiten zu behalten.
+Die Datei `assets/tw-gridbuilder-grid.css` enthält eine Tailwind-`@source inline(...)`-Safelist (damit Tailwind alle vom Pagebuilder dynamisch gebauten Utility-Klassen erzeugt) sowie die wenigen echten Custom-Klassen. Sie wird **nicht automatisch** im Frontend eingebunden.
 
-### Empfohlener Weg: Build-Integration
+> **Voraussetzung:** ein **Tailwind-v4-Build** im Projekt. Nur dort werden die `@source`-Direktiven ausgewertet. Ohne Tailwind-Build existieren die generierten Utility-Klassen (`.grid`, `.gap-*`, `.pt-*`, `.bg-primary-500` …) nicht — die Datei allein per `<link>` einzubinden genügt seit 2.2.0 **nicht** mehr.
 
-Die CSS-Datei in den bestehenden CSS-Build-Prozess des Projekts einbinden. Abhängig vom Toolchain z.B.:
+### Einbindung
+
+Die CSS-Datei per `@import` in die Tailwind-Einstiegsdatei des Projekts einbinden — **nach** `@import 'tailwindcss'`:
 
 ```css
-/* PostCSS / Vite / Webpack */
+@import 'tailwindcss';
+/* … Theme-@theme-Variablen (--color-primary-500 etc.) … */
 @import '/path/to/redaxo/src/addons/tw_gridbuilder/assets/tw-gridbuilder-grid.css';
 ```
 
-```js
-// Vite / Webpack JS-Einstiegspunkt
-import '/path/to/redaxo/src/addons/tw_gridbuilder/assets/tw-gridbuilder-grid.css';
-```
+Tailwind wertet die im Addon-CSS enthaltene `@source inline(...)`-Safelist mit aus und generiert die Utilities als echte `@layer utilities`. Die Hintergrundfarben (`bg-primary-500`, `bg-secondary-500`, `bg-neutral-*`) beziehen ihre Werte aus den `--color-*`-Theme-Variablen — eine andere Farbpalette im Theme wirkt automatisch, ohne Änderung am Addon.
 
-Das Ergebnis landet dann im kompilierten CSS-Bundle des Projekts — kein extra HTTP-Request, Browser-Caching über das Bundle.
+Sollen weitere Farb- oder Spacing-Stufen im Backend wählbar sein, müssen deren Klassennamen sowohl in die `@source inline(...)`-Safelist (in `tw-gridbuilder-grid.css`) als auch in die entsprechenden Optionslisten in `assets/tw-gridbuilder.js` aufgenommen werden.
 
 ### Automatisches Kopieren in ein Build-Verzeichnis
 
-Das Addon kann die Grid-CSS bei jedem Seitenaufruf automatisch in ein konfigurierbares Zielverzeichnis kopieren (nur wenn die Quelldatei neuer ist). So liegt die Datei immer aktuell im Build-Quellordner.
+Liegt die Tailwind-Einstiegsdatei nicht am Addon-Pfad, kann das Addon `tw-gridbuilder-grid.css` bei jedem Seitenaufruf automatisch in ein konfigurierbares Zielverzeichnis kopieren (nur wenn die Quelldatei neuer ist), das dann per `@import` eingebunden wird.
 
 Einmalig konfigurieren, z.B. in der REDAXO-Konsole oder einer `install.php`:
 
@@ -257,14 +259,6 @@ rex_addon::get('tw_gridbuilder')->setConfig(
 ```
 
 Leer lassen oder auf `''` setzen um das Kopieren zu deaktivieren.
-
-### Manuelles Einbinden (ohne Build-Prozess)
-
-Die Datei direkt per `<link>`-Tag im Template referenzieren:
-
-```html
-<link rel="stylesheet" href="/assets/addons/tw_gridbuilder/tw-gridbuilder-grid.css?v=2.1.0">
-```
 
 ---
 

@@ -17,6 +17,13 @@ class Helper
     /**
      * Ersetzt REX_VALUE[n]-Token im Modulcode durch echte Werte
      * und gibt das gerenderte HTML zurück.
+     *
+     * Sicherheitshinweis: Der Modul-Output ist PHP und wird via eval() ausgeführt —
+     * das entspricht dem REDAXO-Vertrauensmodell (Redakteure/Entwickler, die Module
+     * pflegen, dürfen ohnehin PHP schreiben). Für in Anführungszeichen stehende Token
+     * wird der Wert per var_export() sicher gequotet; bare im HTML-Text stehende Token
+     * werden roh eingesetzt (siehe injectValues) und im HTML-Kontext ausgegeben, nicht
+     * als PHP interpretiert — sofern der Wert selbst kein `<?php`-Konstrukt enthält.
      */
     public static function renderModule(int $moduleId, array $values): string
     {
@@ -76,12 +83,18 @@ class Helper
             },
             $code
         );
-        // REX_LINK[n], REX_LINK[id=n ...] → gespeicherte Artikel-ID aus __link_n (via addLinkField)
+        // REX_LINK[n], REX_LINK[id=n ...] → gespeicherte Artikel-ID aus __link_n (via addLinkField).
+        // Analog zu rex_var_link: Standard-Ausgabe ist die Artikel-ID; bei "output=url"
+        // (bzw. jedem output != "id") die aufgelöste URL via rex_getUrl().
         $code = preg_replace_callback(
-            "/(['\"]?)REX_LINK\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
+            "/(['\"]?)REX_LINK\[(?:id=)?(\d+)((?:\s+[^\]]*)?)\](['\"]?)/",
             static function (array $m) use ($values): string {
-                $val = self::resolveSanitized($values, '__link_' . (int) $m[2]);
-                return ($m[1] !== '' && $m[3] !== '') ? var_export($val, true) : $val;
+                $val    = self::resolveSanitized($values, '__link_' . (int) $m[2]);
+                $params = $m[3];
+                if ($val !== '' && preg_match('/\boutput\s*=\s*(["\']?)(?!id\b)\w+\1/i', $params)) {
+                    $val = rex_getUrl($val);
+                }
+                return ($m[1] !== '' && $m[4] !== '') ? var_export($val, true) : $val;
             },
             $code
         );

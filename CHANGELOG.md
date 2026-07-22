@@ -1,5 +1,51 @@
 # Changelog — TW GridBuilder
 
+## [2.3.4] — 2026-07-22
+
+### Verbessert
+- **Zeilen-Kopfzeile vereinheitlicht**: Alle Buttons (Spaltenzahl 1–6, Layout-Presets, ⚙ und Aktions-Icons) sind jetzt gleich hoch (28px); die Icon-Glyphen sind heller und etwas größer (16px) und dadurch deutlich besser erkennbar.
+- **Zell-Aktionsleiste** im Panel rechtsbündig mit etwas Abstand zum Rand.
+
+## [2.3.1] — 2026-07-22
+
+### Neu
+- **Zellen duplizieren / kopieren / einfügen**: Im Zellen-Panel gibt es eine Aktionsleiste — „Duplizieren" (klont die Zelle inkl. Module als neue Spalte in derselben Zeile), „Kopieren" (in die Zwischenablage, auch für andere Artikel/Instanzen) und „Einfügen" (fügt die kopierte Zelle als neue Spalte ein; erscheint nur, wenn etwas kopiert wurde). Eigener `localStorage`-Key `twgb_clipboard_cell_v1` → kollisionsfrei.
+- **Toast-Bestätigung beim Kopieren**: Kurze Einblendung („Zeile kopiert" / „Zelle kopiert"), damit klar ist, dass der Kopiervorgang geklappt hat.
+
+### Verbessert
+- **Icon-Buttons besser lesbar**: Glyphen in den Icon-Buttons (Zeilen-/Modul-Aktionen) heller (`--pb-text-2`, Hover volle Textfarbe) und minimal größer (13→15px). Die Button-Größe bleibt gleich (kompensiert über `line-height`/Padding).
+
+## [2.3.0] — 2026-07-22
+
+### Neu
+- **Zeilen duplizieren**: Neuer Button (⧉) in der Zeilen-Kopfzeile klont die komplette Zeile inkl. aller Spalten, Module und Werte direkt darunter (mit frisch generierten IDs).
+- **Module duplizieren**: In der Modul-Liste einer Zelle klont ⧉ das gewählte Modul inkl. aller Feldwerte.
+- **Zeilen kopieren & einfügen — auch artikel-/instanzübergreifend**: ❐ kopiert eine Zeile in eine Zwischenablage, ⇩ fügt sie in einer beliebigen anderen GridBuilder-Instanz (anderer Slice/Artikel) ein. Umgesetzt über einen eigenen, versionierten `localStorage`-Key (`twgb_clipboard_row_v1`) — **kollisionsfrei** gegenüber bloecks, MForm & anderen Addons, da rein im GridBuilder-eigenen Datenmodell. Der Einfügen-Button erscheint nur, wenn etwas in der Zwischenablage liegt.
+
+## [2.2.1] — 2026-07-22
+
+### Geändert (Architektur — Tailwind-v4-Build jetzt Voraussetzung)
+- **CSS-Kollision mit Tailwind behoben — Utilities kommen jetzt aus dem Tailwind-Build statt vorkompiliert mitgeliefert**: `tw-gridbuilder-grid.css` lieferte bisher alle generischen Utility-Klassen (`.grid`, `.flex`, `.gap-*`, `.pt-/.pb-/.px-*`, `.container`, `.col-span-*`, `.bg-*` …) als **unlayered** CSS. In Tailwind-v4-Projekten gewinnt unlayered CSS immer gegen `@layer utilities` — dadurch überschrieben die mitgelieferten Basisklassen die Tailwind-Responsive-Varianten (`.flex` schlug `lg:hidden`, `.flex-col` schlug `md:flex-row`), und die `.container`-Definition (Bootstrap-artige max-widths) überschrieb site-weit den Theme-Container. Gelöst durch eine Tailwind-`@source inline(...)`-**Safelist** in `tw-gridbuilder-grid.css`: Tailwind erzeugt die dynamisch in `module/output.php` gebauten Klassen nun selbst als echte `@layer utilities`. Responsive-Varianten funktionieren wieder ohne `!important`, Hintergrundfarben (`bg-primary-500`, `bg-secondary-500`, `bg-neutral-*`) beziehen ihre Werte aus den `--color-*`-Theme-Variablen (eine andere Palette wirkt automatisch). Die generischen Utility-Definitionen wurden aus der Datei entfernt; es verbleiben nur echte Custom-Klassen (`video-docker`, `pb-section`, `pb-mobile-reverse`, `reverse-order-on-mobile`, Mobile-`col-span→12`-Override).
+- **Breaking:** Die Datei setzt jetzt einen **Tailwind-v4-Build** voraus (per `@import` nach `@import 'tailwindcss'`). Das frühere Standalone-Einbinden per `<link>` ohne Tailwind-Build funktioniert nicht mehr, da die Utility-Klassen dann nicht existieren. README entsprechend aktualisiert.
+
+### Fixes
+- **Sekundärfarbe im Zeilen-/Zellen-Hintergrund wurde falsch ausgegeben**: Die Backend-Option „Sekundärfarbe" erzeugte `bg-secondary-50` (sehr helle Tönung) statt `bg-secondary-500`. In `assets/tw-gridbuilder.js` (`bgOptions`) korrigiert.
+- **Serverseitige Erst-Vorschau (`module/input.php`) nutzte eine veraltete Token-Ersetzung**: Die eigene `pb_render_preview()`-Funktion erkannte nur `REX_VALUE[n]` (ohne `id=`/`output=html`-Parameter, ohne `REX_MEDIA`/`REX_LINK`) und quotete Token immer per `var_export` — dieselben Fälle, die in `Helper::injectValues()` längst gefixt waren. Dadurch rendered die Erst-Vorschau bei Media-/Link-/Parameter- und Dynamik-Tag-Modulen falsch. `pb_render_preview()` entfernt; `input.php` nutzt jetzt `Helper::renderModule()` — eine einzige Quelle für die Wert-Auflösung.
+- **PHP-Warning bei Zeilen ohne `cells`-Key**: `input.php` iterierte `$pb_row['cells']` ohne Null-Guard; jetzt `?? []`.
+
+- **`REX_LINK` mit `output=url` lieferte die Artikel-ID statt der URL**: `Helper::injectValues()` ersetzte `REX_LINK[n]` immer durch die rohe gespeicherte Artikel-ID und ignorierte den `output`-Parameter. `REX_LINK[id=n output=url]` (z. B. in `href="…"`) ergab dadurch die ID statt der URL. Jetzt analog zu `rex_var_link`: bei `output != id` wird die URL via `rex_getUrl()` aufgelöst.
+
+### Sicherheit
+- **CSRF-Token wird jetzt serverseitig geprüft**: Der AJAX-Endpoint (`TwGridBuilderApi`) validierte den mitgeschickten `rex_csrf_token` bisher nicht (nur `isBackend()`/eingeloggt). Token wird nun unter dem korrekten Feldnamen (`rex_csrf_token::PARAM`) gesendet und per `rex_csrf_token::factory('twgb_load_module')->isValid()` geprüft.
+- **Preview-/Modul-Laden per POST statt GET**: Layout-/Feldwerte (`cell_data`, `values`) wanderten als JSON in die Query-URL und konnten die URL-Längengrenze sprengen (Vorschau schlug dann still fehl). Anfragen laufen jetzt über einen POST-Body (`apiPost`).
+
+### Backend-UX
+- **Optische Trennung + Modul-Namens-Label je Zelle** in der Backend-Strukturvorschau: Lagen mehrere Module in einer Zelle (z. B. Überschrift + Text + Linkbutton), verschmolzen sie zu einem Block. Jedes Modul wird jetzt einzeln umschlossen (`.twgb-be-module`), durch eine dezente gestrichelte Linie getrennt und mit einem kleinen Modul-Namens-Label (`.twgb-be-module-label`, z. B. „0240 – Linkbutton") überschrieben.
+- Hinweis: Modul-Output läuft aus `rex_module.output` (DB) — Änderungen an `module/output.php` müssen in die DB des GridBuilder-Moduls (hier id 32) gespiegelt werden.
+
+### Aufräumen
+- **Zeilen-Container-Logik entwirrt** (`module/output.php`): Das verschachtelte `$container`/`$content_width`-Konstrukt (inkl. `$containerMap`) erzeugte für „Container=Standard + Inhalt=Volle Breite" eine wirkungslose, teils widersprüchliche Klassenkombination (`container mx-auto px-4 w-full`) und doppeltes `w-full`. Ersetzt durch zwei klare Achsen (`$container_full`, `$content_full` → `$inner_width`); identische Ausgabe für alle sinnvollen Kombinationen, ohne Redundanz. Im Backend ist „Breite des Inhalts" jetzt nur wählbar, wenn „Container = Volle Browserbreite" (mit Hinweistext) — die zuvor wirkungslose Kombination ist damit ausgeschlossen.
+
 ## [2.1.5] — 2026-07-02
 
 ### Fixes

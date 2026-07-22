@@ -7,8 +7,8 @@
   window.PB = window.PB || {};
 
   window.PB.init = function (config) {
-    const { mountId, outputId, modules, initialData, ajaxUrl, csrfToken } = config;
-    loadVue().then((Vue) => startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken }));
+    const { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField } = config;
+    loadVue().then((Vue) => startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField }));
   };
 
   function loadVue() {
@@ -116,8 +116,21 @@
     }
   }
 
-  function startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken }) {
+  function startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField }) {
     const { createApp, reactive, nextTick, computed, onMounted } = Vue;
+
+    // POST-Helfer: Daten im Body statt in der URL (verhindert URL-Längenlimit bei
+    // großen cell_data/values) und schickt das CSRF-Token unter dem von REDAXO
+    // erwarteten Feldnamen mit.
+    function apiPost(params) {
+      const body = new URLSearchParams(params);
+      body.set(csrfField || '_csrf_token', csrfToken);
+      return fetch(ajaxUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+        body: body.toString(),
+      }).then((r) => r.json());
+    }
 
     const uid = () => Math.random().toString(36).slice(2, 9);
 
@@ -190,6 +203,44 @@
     const rows = reactive(
       (initialData.rows || []).map(migrateRow)
     );
+
+    // ── Zwischenablage für Zeilen (instanz-/artikelübergreifend) ───────────────
+    // Eigener, versionierter localStorage-Key → keine Kollision mit anderen Addons.
+    const CLIP_KEY = 'twgb_clipboard_row_v1';
+    const clip = reactive({ hasRow: false, hasCell: false });
+    try { clip.hasRow = !!localStorage.getItem(CLIP_KEY); } catch (e) { /* localStorage evtl. gesperrt */ }
+
+    // ── Toast-Benachrichtigung ─────────────────────────────────────────────────
+    const toast = reactive({ msg: '', show: false });
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.msg = msg;
+      toast.show = true;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { toast.show = false; }, 1800);
+    }
+
+    // Tiefe Kopie einer Zeile ohne flüchtige Felder (preview/expanded)
+    function cloneRowData(row) {
+      const r = JSON.parse(JSON.stringify(row));
+      delete r.expanded;
+      (r.cells || []).forEach((c) => { delete c.preview; });
+      return r;
+    }
+    // Frische IDs für Zeile + Zellen + Module (verhindert ID-Kollisionen)
+    function regenRowIds(row) {
+      row.id = uid();
+      row.expanded = false;
+      (row.cells || []).forEach((c) => {
+        c.id = uid();
+        c.preview = '';
+        (c.modules || []).forEach((m) => { m.id = uid(); });
+      });
+      return row;
+    }
+    function refreshRowPreviews(row) {
+      nextTick(() => row.cells.forEach((c) => { if (c.modules.length) refreshCellPreview(c); }));
+    }
 
     // ── Panel state ───────────────────────────────────────────────────────────
     const panel = reactive({
@@ -316,6 +367,87 @@
       row.cells.forEach((c, i) => { c.span = base + (i < extra ? 1 : 0); });
     }
 
+    // Zeile direkt unterhalb duplizieren (inkl. aller Zellen/Module, mit neuen IDs)
+    function duplicateRow(idx) {
+      collectFromDom();
+      const clone = regenRowIds(cloneRowData(rows[idx]));
+      rows.splice(idx + 1, 0, clone);
+      refreshRowPreviews(clone);
+    }
+    // Zeile in die Zwischenablage kopieren (auch für andere Instanzen/Artikel)
+    function copyRow(idx) {
+      collectFromDom();
+      try {
+        localStorage.setItem(CLIP_KEY, JSON.stringify(cloneRowData(rows[idx])));
+        clip.hasRow = true;
+        showToast('Zeile kopiert');
+      } catch (e) { /* ignore */ }
+    }
+    // Kopierte Zeile unterhalb der angegebenen Zeile einfügen
+    function pasteRow(idx) {
+      let raw = null;
+      try { raw = localStorage.getItem(CLIP_KEY); } catch (e) { /* ignore */ }
+      if (!raw) return;
+      let data = null;
+      try { data = JSON.parse(raw); } catch (e) { return; }
+      if (!data || !Array.isArray(data.cells)) return;
+      const row = regenRowIds(migrateRow(data));
+      rows.splice(idx + 1, 0, row);
+      refreshRowPreviews(row);
+    }
+
+    // ── Zellen: duplizieren / kopieren / einfügen ──────────────────────────────
+    const CLIP_CELL_KEY = 'twgb_clipboard_cell_v1';
+    try { clip.hasCell = !!localStorage.getItem(CLIP_CELL_KEY); } catch (e) { /* ignore */ }
+
+    function cloneCellData(cell) {
+      const c = JSON.parse(JSON.stringify(cell));
+      delete c.preview;
+      return c;
+    }
+    function regenCellIds(cell) {
+      cell.id = uid();
+      cell.preview = '';
+      (cell.modules || []).forEach((m) => { m.id = uid(); });
+      return cell;
+    }
+    // Aktuell im Panel bearbeitete Zelle in ihrer Zeile duplizieren (als neue Spalte)
+    function duplicateCell() {
+      if (!panel.row || !panel.cell) return;
+      collectFromDom();
+      const row   = panel.row;
+      const idx   = row.cells.indexOf(panel.cell);
+      const clone = regenCellIds(cloneCellData(panel.cell));
+      row.cells.splice(idx + 1, 0, clone);
+      row.cols = row.cells.length;
+      refreshRowPreviews(row);
+    }
+    function copyCell() {
+      if (!panel.cell) return;
+      collectFromDom();
+      try {
+        localStorage.setItem(CLIP_CELL_KEY, JSON.stringify(cloneCellData(panel.cell)));
+        clip.hasCell = true;
+        showToast('Zelle kopiert');
+      } catch (e) { /* ignore */ }
+    }
+    // Kopierte Zelle als neue Spalte in die aktuelle Zeile einfügen
+    function pasteCell() {
+      if (!panel.row) return;
+      let raw = null;
+      try { raw = localStorage.getItem(CLIP_CELL_KEY); } catch (e) { /* ignore */ }
+      if (!raw) return;
+      let data = null;
+      try { data = JSON.parse(raw); } catch (e) { return; }
+      if (!data) return;
+      const row  = panel.row;
+      const idx  = panel.cell ? row.cells.indexOf(panel.cell) : row.cells.length - 1;
+      const cell = regenCellIds(migrateCell(data));
+      row.cells.splice(idx + 1, 0, cell);
+      row.cols = row.cells.length;
+      refreshRowPreviews(row);
+    }
+
     // ── Panel ────────────────────────────────────────────────────────────────
     function openCellPanel(row, cell) {
       collectFromDom();
@@ -354,12 +486,7 @@
 
     function refreshCellPreview(cell) {
       if (!cell.modules.length) { cell.preview = ''; return; }
-      const url = ajaxUrl
-        + '&rex_csrf_token=' + csrfToken
-        + '&twgb_preview=1'
-        + '&cell_data=' + encodeURIComponent(JSON.stringify(cell));
-      fetch(url)
-        .then(r => r.json())
+      apiPost({ twgb_preview: '1', cell_data: JSON.stringify(cell) })
         .then(data => { if (data.preview !== undefined) cell.preview = data.preview; })
         .catch(() => {});
     }
@@ -399,6 +526,19 @@
       panel.slotIdx = t;
     }
 
+    // Modul innerhalb der Zelle duplizieren (inkl. aller Werte, mit neuer ID)
+    function duplicateSlot(idx) {
+      collectFromDom();
+      const src  = panel.cell.modules[idx];
+      const copy = JSON.parse(JSON.stringify(src));
+      copy.id = uid();
+      panel.cell.modules.splice(idx + 1, 0, copy);
+      panel.slotIdx = idx + 1;
+      clearFormHtml(mountId);
+      const slot = activeSlot();
+      if (slot && slot.module_id) loadModuleForm(panel.cell, slot);
+    }
+
     function onModuleChange(slot) {
       slot.values = {};
       clearFormHtml(mountId);
@@ -417,14 +557,12 @@
       panel.loading = true;
       // namespace: cell.id + slot.id to be unique
       const ns = cell.id + '_' + slot.id;
-      const url = ajaxUrl
-        + '&module_id=' + slot.module_id
-        + '&cell_id='   + ns
-        + '&values='    + encodeURIComponent(JSON.stringify(slot.values || {}))
-        + '&rex_csrf_token=' + csrfToken;
 
-      fetch(url)
-        .then((r) => r.json())
+      apiPost({
+        module_id: slot.module_id,
+        cell_id:   ns,
+        values:    JSON.stringify(slot.values || {}),
+      })
         .then((data) => {
           panel.loading = false;
           nextTick(() => {
@@ -540,12 +678,14 @@
           rows.forEach(r => r.cells.forEach(c => { if (c.modules.length) refreshCellPreview(c); }));
         });
         return {
-          rows, panel, modules, rowDrag, cellDrag,
+          rows, panel, modules, rowDrag, cellDrag, clip, toast,
           pbFormId: FORM_CONTAINER_ID(mountId),
           activeSlot,
           addRow, removeRow, moveRow, setRowCols,
+          duplicateRow, copyRow, pasteRow,
+          duplicateCell, copyCell, pasteCell,
           openCellPanel, openRowPanel, closePanel, applyAndClose,
-          addSlot, removeSlot, selectSlot, moveSlot, onModuleChange,
+          addSlot, removeSlot, selectSlot, moveSlot, duplicateSlot, onModuleChange,
           collectFromDom, switchToContent,
           isPresetActive: (row, spans) => {
             if (row.cells.length !== spans.length) return false;
@@ -608,7 +748,7 @@
             { value: 'bg-white',         label: 'Weiß' },
             { value: 'bg-black',         label: 'Schwarz' },
             { value: 'bg-primary-500',   label: 'Primärfarbe' },
-            { value: 'bg-secondary-50',  label: 'Sekundärfarbe' },
+            { value: 'bg-secondary-500', label: 'Sekundärfarbe' },
             { value: 'bg-neutral-200',   label: 'Neutral 200' },
             { value: 'bg-neutral-100',   label: 'Neutral 100' },
             { value: 'bg-neutral-50',    label: 'Neutral 50' },
@@ -659,6 +799,9 @@
         <button type="button" class="pb-icon-btn" @click.stop="openRowPanel(row)" title="Zeilen-Einstellungen">⚙</button>
         <div class="pb-row-actions">
           <button type="button" class="pb-icon-btn" :class="{ active: row.expanded }" @click.stop="row.expanded = !row.expanded" title="Vorschau ein-/ausklappen">⊞</button>
+          <button type="button" class="pb-icon-btn" @click.stop="duplicateRow(rIdx)" title="Zeile duplizieren">⧉</button>
+          <button type="button" class="pb-icon-btn" @click.stop="copyRow(rIdx)" title="Zeile kopieren (auch für andere Artikel)">❐</button>
+          <button type="button" class="pb-icon-btn" v-if="clip.hasRow" @click.stop="pasteRow(rIdx)" title="Kopierte Zeile hier einfügen">⇩</button>
           <button type="button" class="pb-icon-btn" @click.stop="moveRow(rIdx, -1)" :disabled="rIdx === 0">↑</button>
           <button type="button" class="pb-icon-btn" @click.stop="moveRow(rIdx, 1)"  :disabled="rIdx === rows.length - 1">↓</button>
           <button type="button" class="pb-icon-btn danger" @click.stop="removeRow(rIdx)">✕</button>
@@ -758,6 +901,13 @@
           <button type="button" class="pb-inner-tab" :class="{ active: panel.cellTab === 'settings' }" @click="collectFromDom(); panel.cellTab = 'settings'">Einstellungen</button>
         </div>
 
+        <!-- Zell-Aktionen: duplizieren / kopieren / einfügen -->
+        <div class="pb-cell-actions">
+          <button type="button" class="btn btn-default btn-xs" @click="duplicateCell()" title="Zelle als neue Spalte duplizieren">⧉ Duplizieren</button>
+          <button type="button" class="btn btn-default btn-xs" @click="copyCell()" title="Zelle kopieren (auch für andere Artikel)">❐ Kopieren</button>
+          <button type="button" class="btn btn-default btn-xs" v-if="clip.hasCell" @click="pasteCell()" title="Kopierte Zelle als neue Spalte einfügen">⇩ Einfügen</button>
+        </div>
+
         <!-- CONTENT sub-tab -->
         <template v-if="panel.cellTab === 'content'">
           <!-- Module list -->
@@ -774,6 +924,7 @@
               <div class="pb-module-item-actions">
                 <button type="button" class="pb-icon-btn" @click.stop="moveSlot(sIdx, -1)" :disabled="sIdx === 0" title="Nach oben">↑</button>
                 <button type="button" class="pb-icon-btn" @click.stop="moveSlot(sIdx, 1)"  :disabled="sIdx === panel.cell.modules.length - 1" title="Nach unten">↓</button>
+                <button type="button" class="pb-icon-btn" @click.stop="duplicateSlot(sIdx)" :disabled="!slot.module_id" title="Modul duplizieren">⧉</button>
                 <button type="button" class="pb-icon-btn danger" @click.stop="removeSlot(sIdx)" title="Entfernen">✕</button>
               </div>
             </div>
@@ -895,9 +1046,10 @@
         </div>
         <div class="pb-panel-section">
           <label class="pb-label">Breite des Inhalts</label>
-          <select class="form-control" v-model="panel.row.content_width">
+          <select class="form-control" v-model="panel.row.content_width" :disabled="panel.row.container !== 'full'">
             <option v-for="o in contentWidthOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
           </select>
+          <small v-if="panel.row.container !== 'full'" class="pb-hint">Nur wählbar, wenn Container = „Volle Browserbreite".</small>
         </div>
         <div class="pb-panel-section pb-resp-group">
           <label class="pb-label pb-resp-label">Abstand oben</label>
@@ -985,6 +1137,10 @@
   </transition>
 
   <div v-if="panel.open" class="pb-overlay" @click="applyAndClose"></div>
+
+  <transition name="pb-toast-fade">
+    <div v-if="toast.show" class="pb-toast">{{ toast.msg }}</div>
+  </transition>
 </div>
       `,
     }).mount('#' + mountId);
