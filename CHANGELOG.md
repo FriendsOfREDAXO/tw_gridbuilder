@@ -1,5 +1,67 @@
 # Changelog — TW GridBuilder
 
+## [2.11.1] — 2026-07-23
+
+### UI
+- **Modul-Labels in der Backend-Strukturvorschau bekommen Luft**: Der Abstand oberhalb des Labels (`.twgb-be-module-label`) ist jetzt deutlich größer als der darunter (20px / 7px statt 0 / 8px). Dadurch gehört das Label optisch zum folgenden Modul und trennt es zugleich sichtbar vom vorhergehenden — bei mehreren Modulen in einer Zelle (z.B. Überschrift + Text + Linkbutton) ist die Gliederung dadurch klar erkennbar.
+- Der Modul-Abstand steckt jetzt vollständig im `margin-top` des Labels; `.twgb-be-module + .twgb-be-module` wurde auf `0` gesetzt, damit sich die Abstände nicht addieren. Das erste Modul einer Zelle bekommt keinen zusätzlichen Abstand nach oben (die Zell-Metazeile liefert ihn bereits).
+- Nur CSS betroffen — kein Modul-Update, kein CSS-Rebuild, keine Datenänderung.
+
+## [2.11.0] — 2026-07-23
+
+### UI — Einstellungs-Panel neu strukturiert
+Das Panel war auf ~1300px Höhe mit neun gleichwertigen, permanent offenen Gruppen gewachsen und dadurch schwer überschaubar. Neu gegliedert in **sechs aufklappbare Sektionen** — standardmäßig ist nur „Layout & Abstände" offen:
+
+`LAYOUT & ABSTÄNDE` · `HINTERGRUND` · `AUSRICHTUNG & VERHALTEN` · `ECKEN & EFFEKTE` · `ANIMATION` · `VERLINKUNG`
+
+- **Innen- und Außen-Abstände zusammengeführt**: beide liegen jetzt in einer Sektion untereinander (Zwischenüberschriften statt zweier weit auseinanderliegender Gruppen).
+- **Ein Regler statt drei**: Jede Abstandszeile ist ein Regler, der zugeklappt **alle drei Breakpoints gleichzeitig** setzt. Ein Monitor-Button klappt bei Bedarf auf Smartphone / Tablet / Desktop auf. Ersetzt 18 permanent sichtbare Regler durch 6.
+- **Zahlenfeld neben jedem Regler** (0–16), Eingaben werden auf den gültigen Bereich geklemmt (`clampNum()`).
+- **Ecken auf eine Zeile reduziert**: „Abgerundet" als ein Regler; ein Button klappt die vier Einzelecken auf.
+- **Status-Punkt in der Sektions-Kopfzeile**, wo etwas vom Standard abweicht — man sieht ohne Aufklappen, wo Werte gesetzt sind.
+- **Gruppen mit nur einem Control aufgelöst**: „Grid" (Mobil umkehren) ist nach *Ausrichtung & Verhalten* gewandert, „Effekte & Erweitert" nach *Ecken & Effekte*.
+
+### Schutz vor stillem Datenverlust
+- Weichen die drei Breakpoint-Werte in **bestehenden Daten** voneinander ab, wird die Zeile **automatisch aufgeklappt** dargestellt (`respDiffers()`). Sonst würde ein einzelner Regler beim ersten Anfassen die abweichenden Tablet-/Desktop-Werte überschreiben. Gleiche Logik für ungleiche Ecken (`cornersDiffer()`).
+- Bewusstes **Zuklappen** vereinheitlicht die Werte auf den Smartphone- bzw. „oben links"-Wert — die einzige Stelle, an der Zuklappen Daten verändert, und die inhaltliche Bedeutung von „ein Wert für alles".
+
+### Intern
+- Neue Template-Bausteine `SECTION()`, `SLIDER()`, `RESP_ROW()`; `RESP_RANGE()` und das alte `RADIUS_UI`-Markup entfallen.
+- Neuer Panel-UI-State `panel.acc` (offene Sektionen) und `panel.resp` (aufgeklappte Regler), beim Öffnen einer Zeile/Zelle über `resetPanelUi()` zurückgesetzt. Nach „Einstellungen zurücksetzen" bleiben die geöffneten Sektionen stehen (`keepAcc`).
+- CSS: `.pb-acc*`, `.pb-ctl*`, `.pb-slider`, `.pb-num`, `.pb-sub-label` ersetzen `.pb-resp-*`, `.pb-radius-*` und `.pb-panel-group-label`.
+
+### Kompatibilität
+- Rein editorseitig (JS/CSS). **Kein Modul-Update, kein CSS-Rebuild, keine Datenmigration** — Datenformat und `module/output.php` sind unverändert. Alle Felder und Wertebereiche bleiben identisch, nur ihre Darstellung ändert sich.
+
+## [2.10.0] — 2026-07-23
+
+### Neu
+- **Spalten zeilenübergreifend per Drag & Drop verschieben**: Eine Zelle lässt sich jetzt nicht mehr nur innerhalb ihrer Zeile sortieren, sondern am Griff `⠿` (oder an der Zelle selbst) in eine **beliebige andere Zeile** ziehen — samt allen enthaltenen Modulen und allen Zell-Einstellungen.
+- **Einfügemarke statt Zell-Highlight**: Eine blaue Marke zeigt die exakte Zielposition. Linke/rechte Hälfte der Zelle unter dem Mauszeiger entscheidet über Einfügen davor/dahinter.
+- **Ablegen auf der Freifläche einer Zeile** hängt die Spalte hinten an — dadurch ist auch das Ablegen in einer **leeren Zeile** möglich.
+- Visuelles Feedback: Zielzeile wird hervorgehoben (`.pb-cells-grid-drop`), die gezogene Zelle transparent dargestellt (`.pb-cell-dragging`).
+- Ein **offenes Panel folgt der Zelle**: Wird die gerade bearbeitete Spalte verschoben, bleibt sie geöffnet und ist danach korrekt der neuen Zeile (`panel.row`) zugeordnet.
+
+### Verhalten / Grenzen
+- Die **Spaltenbreite (`span`) wandert unverändert mit** und wird bewusst *nicht* an die Zielzeile normalisiert — eine Auto-Korrektur würde manuell eingestellte Breiten überschreiben. Eine Zeile kann dadurch vorübergehend ≠ 12 Spans belegen (im Backend proportional, im Frontend Umbruch); Korrektur per Layout-Preset oder Resize-Handle. Gleiches Verhalten wie bei „Duplizieren"/„Einfügen".
+- Die **letzte verbleibende Spalte** einer Zeile kann nicht herausgezogen werden (sonst bliebe eine Zeile ohne Spalten zurück) — es erscheint ein Hinweis-Toast.
+- `cellDrag` trägt jetzt `fromRowId` / `toRowId` statt eines einzelnen `rowId`; `onRowDragOver` ignoriert Events, solange ein Zellen-Drag läuft (kein Konflikt zwischen Zeilen- und Zellen-Sortierung).
+- Firefox-Kompatibilität: `dataTransfer.setData()` beim Drag-Start gesetzt.
+
+### Kompatibilität
+- Rein editorseitig (JS/CSS). **Kein Modul-Update, kein CSS-Rebuild nötig**, keine Datenmigration — das gespeicherte JSON-Format ist unverändert.
+
+## [2.9.0] — 2026-07-23
+
+### Neu
+- **„Einstellungen zurücksetzen"** in beiden Panels: Button oben im **Zeilen-Panel** und in der Aktionsleiste des **Zellen-Panels** (nur im Untertab *Einstellungen* sichtbar, im Tab *Inhalt* wäre er missverständlich).
+- Zurückgesetzt werden ausschließlich Gestaltungswerte auf die Defaults aus `makeRow()` / `makeCell()`: Hintergrund, Innen-/Außen-Abstände, Gap, Container & Inhaltsbreite, Ecken-Radien, Ausrichtung, Hover-Schatten, eigene CSS-Klasse, Animation, Verlinkung.
+- **Struktur und Inhalte bleiben erhalten** — Zeile: `id`, `cols`, `cells`; Zelle: `id`, `span`, `modules`, `preview`.
+- Sicherheitsabfrage per `confirm()` vor dem Zurücksetzen, Bestätigung per Toast.
+
+### Kompatibilität
+- Rein editorseitig (JS/CSS). Kein Modul-Update, kein CSS-Rebuild, keine Datenmigration.
+
 ## [2.8.1] — 2026-07-23
 
 ### UI

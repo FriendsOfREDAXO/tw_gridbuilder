@@ -218,6 +218,87 @@ Jede Zeile und jede Zelle bekommt im Frontend zusätzlich zu den Layout-Utility-
 
 ---
 
+## Bedienung im Editor
+
+### Zeilen sortieren
+
+Jede Zeile lässt sich am Griff `⠿` im Zeilen-Header greifen und per Drag & Drop an eine andere Position schieben. Alternativ verschieben die Pfeil-Buttons `↑` / `↓` im Zeilen-Header die Zeile um eine Position.
+
+### Spalten verschieben — innerhalb einer Zeile und zeilenübergreifend
+
+Eine Spalte lässt sich am Griff `⠿` in der Zelle (oder an der Zelle selbst) greifen und ablegen:
+
+- **innerhalb derselben Zeile** — die Spaltenreihenfolge ändert sich
+- **in einer beliebigen anderen Zeile** — die Spalte wechselt samt allen enthaltenen Modulen und allen Zell-Einstellungen die Zeile
+
+Beim Ziehen zeigt eine blaue Einfügemarke die Zielposition an. Ob die Spalte **vor** oder **hinter** der Zelle landet, über der der Mauszeiger steht, entscheidet die linke bzw. rechte Hälfte dieser Zelle. Wird über der Freifläche einer Zeile losgelassen, hängt die Spalte hinten an — so lässt sich auch in eine leere Zeile ablegen. Die Zielzeile wird beim zeilenübergreifenden Ziehen farblich hervorgehoben, die gezogene Spalte transparent dargestellt.
+
+Ist die verschobene Spalte gerade im Panel geöffnet, bleibt sie geöffnet und ist danach korrekt der neuen Zeile zugeordnet.
+
+> **Die Spaltenbreite (`span`) wandert unverändert mit** und wird *nicht* automatisch an die Zielzeile angepasst. Eine Zeile kann dadurch vorübergehend mehr oder weniger als 12 Spalten belegen — im Backend rendert das proportional weiter, im Frontend bricht die Zeile um. Nach dem Verschieben die Breiten per Layout-Preset im Zeilen-Header oder per Resize-Handle zwischen den Zellen korrigieren. (Gleiches Verhalten wie bei „Duplizieren" und „Einfügen".)
+
+> Die **letzte verbleibende Spalte** einer Zeile lässt sich nicht in eine andere Zeile ziehen — sonst bliebe eine Zeile ohne Spalten zurück. Der Editor zeigt in dem Fall einen Hinweis.
+
+### Spalten skalieren
+
+Zwischen zwei benachbarten Zellen liegt ein Resize-Handle: Ziehen verschiebt die Grenze und verteilt die Spans der beiden Zellen neu. Die Layout-Presets im Zeilen-Header (z.B. `4+8`, `6+3+3`) setzen gängige Aufteilungen mit einem Klick.
+
+### Aufbau des Einstellungs-Panels
+
+Zeilen- und Zellen-Panel sind in **aufklappbare Sektionen** gegliedert. Beim Öffnen ist nur „Layout & Abstände" aufgeklappt, alles Weitere liegt zugeklappt darunter:
+
+| Sektion | Inhalt |
+|---|---|
+| **Layout & Abstände** | Container & Inhaltsbreite (nur Zeile), Innen-Abstände (oben / unten / Gap bzw. links-rechts), Außen-Abstände |
+| **Hintergrund** | Farbe, Bild, Video |
+| **Ausrichtung & Verhalten** | Textausrichtung, vertikale Ausrichtung, „Mobil umkehren" (nur Zeile) |
+| **Ecken & Effekte** | Abgerundete Ecken, Schatten bei Hover, eigene CSS-Klasse |
+| **Animation** | Art, Verzögerung, Dauer |
+| **Verlinkung** | Ganze Zeile / Spalte als interner Link |
+
+Mehrere Sektionen dürfen gleichzeitig offen sein. Ein **Punkt in der Kopfzeile** markiert Sektionen, in denen etwas vom Standard abweicht — so ist ohne Aufklappen erkennbar, wo an einer Zeile oder Spalte Werte hinterlegt sind.
+
+### Abstände einstellen — ein Wert oder pro Bildschirmgröße
+
+Jede Abstandszeile besteht aus **Regler + Zahlenfeld** (0–16, Eingaben werden auf den gültigen Bereich begrenzt). Im Normalfall steuert dieser eine Regler **alle drei Breakpoints gleichzeitig**:
+
+```
+Abstand oben     [────●────] [ 3 ]   🖥
+```
+
+Der Button rechts klappt die Zeile auf und macht jeden Breakpoint einzeln einstellbar:
+
+```
+Abstand oben                  3 / 3 / 5   🖥
+  📱 Smartphone  [────●────] [ 3 ]
+  💻 Tablet      [────●────] [ 3 ]
+  🖥 Desktop     [──────●──] [ 5 ]
+```
+
+Zwei Verhaltensregeln, die verhindern, dass Werte unbemerkt verlorengehen:
+
+- **Automatisches Aufklappen:** Weichen die drei Werte in bestehenden Daten bereits voneinander ab, wird die Zeile immer aufgeklappt dargestellt. Ein einzelner Regler würde die abweichenden Tablet-/Desktop-Werte sonst beim ersten Anfassen überschreiben.
+- **Zuklappen vereinheitlicht:** Klappt man bewusst zu, werden alle drei Breakpoints auf den Smartphone-Wert gesetzt. Das ist die einzige Stelle, an der Zuklappen die Daten verändert — und die inhaltliche Bedeutung von „ein Wert für alle Bildschirmgrößen".
+
+Die **abgerundeten Ecken** funktionieren nach demselben Muster: ein Regler für alle vier Ecken, aufklappbar auf die Einzelecken. Zugeklappt werden alle Ecken auf den Wert von „oben links" vereinheitlicht.
+
+### Einstellungen zurücksetzen
+
+Zeilen- und Zellen-Panel haben je einen Button **„Einstellungen zurücksetzen"** (Zeilen-Panel oben, Zellen-Panel in der Aktionsleiste des Untertabs *Einstellungen*). Die gerade geöffneten Sektionen bleiben dabei offen. Er setzt **ausschließlich Gestaltungswerte** auf die Standardwerte zurück: Hintergrund, Innen- und Außen-Abstände, Gap, Container/Breite, Ecken-Radien, Ausrichtung, Hover-Schatten, eigene CSS-Klasse, Animation und Verlinkung.
+
+Unangetastet bleiben:
+
+- **Zeile** — die Spaltenaufteilung und alle enthaltenen Zellen samt Inhalten
+- **Zelle** — ihre Breite (`span`) und alle enthaltenen Module
+
+Vor dem Zurücksetzen wird eine Bestätigung abgefragt.
+
+### Kopieren, Einfügen, Duplizieren
+
+Zeilen und Zellen lassen sich kopieren (`fa-copy`) und an anderer Stelle wieder einfügen (`fa-clipboard`) — die Zwischenablage liegt im `localStorage` und funktioniert damit **auch artikelübergreifend**. „Duplizieren" (`fa-clone`) legt direkt eine Kopie neben dem Original an. Beim Einfügen/Duplizieren werden alle IDs neu vergeben.
+
+---
+
 ## Zeilen-Einstellungen
 
 | Einstellung | Werte | Ergebnis |
@@ -246,7 +327,7 @@ Jede Zeile und jede Zelle bekommt im Frontend zusätzlich zu den Layout-Utility-
 | Innen links/rechts | 0–16 pro Breakpoint | `px-{n} md:px-{n} lg:px-{n}` |
 | Außen oben/unten/seitl. | 0–16 pro Breakpoint | `mt-*` / `mb-*` / `mx-*` (+ `md:`/`lg:`) auf dem Zell-Element |
 | Ausrichtung vertikal | `start`, `center`, `end` | — / `flex flex-col justify-center` / `flex flex-col justify-end` |
-| Abgerundet | bool | `rounded-lg` |
+| Abgerundete Ecken | Stufe 0–9 je Ecke (`0`, `xs`, `sm`, `md`, `lg`, `xl`, `2xl`, `3xl`, `4xl`, `full`) | `rounded-*` bzw. `rounded-tl-*` / `rounded-tr-*` / `rounded-bl-*` / `rounded-br-*` |
 | Hintergrundfarbe | TW-Klasse | direkt als Klasse |
 | Hintergrundbild | Dateiname | `background-image` Style + Focuspoint |
 | Hintergrundvideo | Dateiname | `.video-docker` |
@@ -312,6 +393,7 @@ Eine Sicherheitsprüfung (Input-Validierung, XSS, CSRF, API-Zugriffe) wurde am 2
 ## Bekannte Einschränkungen
 
 - **Teilweise theme-abhängig:** Projektspezifische Tailwind-Klassen (z.B. `bg-primary-500`, `bg-secondary-50`) kommen aus dem kompilierten Tailwind-Build des Themes. Alle strukturellen Klassen (Grid, Abstände, Container, video-docker) sind vollständig in `tw-gridbuilder-grid.css` enthalten.
+- **Spalten-Spans werden beim Verschieben/Duplizieren/Einfügen nicht normalisiert** — eine Zeile kann dadurch mehr oder weniger als 12 Spalten belegen und im Frontend umbrechen. Bewusste Entscheidung: eine automatische Korrektur würde manuell eingestellte Breiten überschreiben. Korrektur per Layout-Preset oder Resize-Handle.
 - Modul-Input muss MForm-kompatibel sein
 - CKEditor 5 (`cke5`) und CKEditor 4 (`ckeditor`) werden unterstützt; `redactor` und andere Rich-Text-Editoren nicht getestet
 

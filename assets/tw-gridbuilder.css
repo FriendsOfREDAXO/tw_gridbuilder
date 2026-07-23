@@ -339,6 +339,21 @@ body.rex-theme-dark .pb-panel {
 .pb-cell-active { border-color: var(--pb-accent) !important; background: var(--pb-cell-act-bg) !important; border-style: solid !important; }
 .pb-cell-filled { border-style: solid; border-color: var(--pb-accent-border); background: var(--pb-cell-fill-bg); }
 .pb-cell-drag-over { border-color: var(--pb-cell-drag-bd) !important; background: var(--pb-cell-drag-bg) !important; }
+/* Zelle, die gerade gezogen wird */
+.pb-cell-dragging { opacity: .4; border-color: var(--pb-cell-drag-bd) !important; }
+
+/* Einfügemarke beim Verschieben von Spalten (auch zeilenübergreifend) */
+.pb-cell-drop-line {
+  flex: 0 0 4px;
+  align-self: stretch;
+  min-height: 72px;
+  border-radius: 2px;
+  background: var(--pb-accent);
+  box-shadow: 0 0 0 2px var(--pb-accent-bg);
+  pointer-events: none;
+}
+/* Zielzeile beim zeilenübergreifenden Verschieben hervorheben */
+.pb-cells-grid-drop { background: var(--pb-accent-bg); border-radius: 6px; }
 
 /* Drag handle inside cell */
 .pb-cell-drag-handle {
@@ -696,37 +711,89 @@ body.rex-theme-dark .pb-panel {
 .pb-range { flex: 1; }
 .pb-range-val { min-width: 22px; text-align: right; font-weight: 700; color: var(--pb-accent); }
 
-/* ── Responsive Slider Groups (3 Spalten) ── */
-.pb-resp-group { flex-direction: column; align-items: stretch; gap: 6px; }
-.pb-resp-label { margin-bottom: 0; }
-.pb-resp-cols  { display: flex; gap: 6px; }
-.pb-resp-col   { flex: 1; min-width: 0; }
-.pb-resp-col-hd {
-  display: block; text-align: center;
-  font-size: 10px; font-weight: 700; letter-spacing: .03em;
-  padding: 2px 3px; border-radius: 3px; margin-bottom: 4px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.pb-bp-mob .pb-resp-col-hd { background: #1e40af; color: #fff; }
-.pb-bp-md  .pb-resp-col-hd { background: #0f766e; color: #fff; }
-.pb-bp-lg  .pb-resp-col-hd { background: #7c3aed; color: #fff; }
-.pb-resp-col-row { display: flex; align-items: center; gap: 4px; }
-.pb-resp-col-row .pb-range { flex: 1; min-width: 0; }
-.pb-resp-col-row .pb-range-val { min-width: 16px; font-size: 11px; text-align: right; font-weight: 700; color: var(--pb-accent); }
-
-/* ── Border-Radius-Steuerung (Ecken) ── */
-.pb-radius { display: flex; flex-direction: column; gap: 10px; }
-.pb-radius-all {
+/* ── Akkordeon-Sektionen im Panel ── */
+.pb-acc { border-top: 1px solid var(--pb-border); }
+.pb-acc:first-child { border-top: none; }
+.pb-acc-head {
   display: flex; align-items: center; gap: 8px;
-  padding-bottom: 8px; border-bottom: 1px dashed var(--pb-border, #e5e7eb);
+  width: 100%; padding: 11px 16px;
+  background: none; border: none; cursor: pointer;
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--pb-text-2); text-align: left;
+  transition: background .12s, color .12s;
 }
-.pb-radius-all-lbl { font-size: 11px; font-weight: 700; min-width: 70px; }
-.pb-radius-all .pb-range { flex: 1; }
-.pb-radius-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+.pb-acc-head:hover { background: var(--pb-accent-bg); color: var(--pb-text); }
+.pb-acc-head .fa { font-size: 10px; width: 10px; color: var(--pb-text-muted); }
+.pb-acc.open .pb-acc-head { color: var(--pb-text); }
+.pb-acc-title { flex: 1; }
+/* Punkt = in dieser Gruppe weicht etwas vom Standard ab */
+.pb-acc-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--pb-accent); flex-shrink: 0;
 }
-.pb-radius-corner { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.pb-radius-corner-lbl { font-size: 10px; font-weight: 700; color: #64748b; white-space: nowrap; }
+.pb-acc-body { padding: 2px 16px 14px; }
+
+/* Zwischenüberschrift innerhalb einer Sektion (z.B. Innen-/Außen-Abstände) */
+.pb-sub-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--pb-text-muted);
+  margin: 14px 0 6px;
+}
+.pb-acc-body > .pb-sub-label:first-child { margin-top: 6px; }
+.pb-hint-tight { margin-top: 2px; }
+
+/* ── Regler + Zahlenfeld ── */
+.pb-slider { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.pb-slider .pb-range { flex: 1; min-width: 0; }
+.pb-num {
+  width: 46px; flex-shrink: 0;
+  padding: 3px 6px;
+  font-size: 12px; font-weight: 700; text-align: center;
+  color: var(--pb-accent);
+  background: var(--pb-bg-2); border: 1px solid var(--pb-border); border-radius: 4px;
+}
+.pb-num:focus { outline: none; border-color: var(--pb-accent); }
+/* Nur-Lese-Wertanzeige (Ecken-Stufen wie „lg", „2xl") */
+.pb-num-ro { background: none; border-color: transparent; text-align: right; }
+
+/* ── Einstell-Zeile mit aufklappbaren Breakpoints / Ecken ── */
+.pb-ctl { padding: 3px 0; }
+.pb-ctl-main { display: flex; align-items: center; gap: 8px; }
+.pb-ctl-label {
+  width: 118px; flex-shrink: 0; margin: 0;
+  font-size: 12px; color: var(--pb-text-2); white-space: nowrap;
+}
+.pb-ctl-summary {
+  flex: 1; font-size: 12px; font-weight: 700; color: var(--pb-accent);
+  font-variant-numeric: tabular-nums;
+}
+/* Umschalter „ein Wert" ⇄ „pro Breakpoint" bzw. „alle Ecken" ⇄ „einzeln" */
+.pb-ctl-bp {
+  flex-shrink: 0;
+  width: 26px; height: 24px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: none; border: 1px solid transparent; border-radius: 4px;
+  color: var(--pb-text-muted); cursor: pointer;
+  transition: all .12s;
+}
+.pb-ctl-bp:hover { background: var(--pb-accent-bg); color: var(--pb-text); border-color: var(--pb-border); }
+.pb-ctl-bp.active { background: var(--pb-accent); color: #fff; border-color: var(--pb-accent); }
+.pb-ctl-bp .fa { font-size: 11px; }
+/* Aufgeklappter Bereich */
+.pb-ctl-bps {
+  margin: 4px 0 8px 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--pb-accent-bg);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.pb-ctl-bp-row { display: flex; align-items: center; gap: 8px; }
+.pb-ctl-bp-lbl {
+  width: 106px; flex-shrink: 0;
+  font-size: 11px; color: var(--pb-text-3); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.pb-ctl-bp-lbl .fa { width: 11px; text-align: center; color: var(--pb-text-muted); }
+.pb-ctl-corners { margin-left: 0; }
 
 /* ── Mehrspaltiges Raster im Panel (Hintergrund, Ausrichtung, Erweitert) ── */
 .pb-panel-grid {
@@ -851,12 +918,15 @@ body:not(.rex-theme-light) .pb-panel select.form-control {
   line-height: 1.5;
 }
 /* Modul-Namens-Label mit integrierter Trennlinie:
-   die gestrichelte Linie läuft von links bis zum rechtsbündigen Label. */
+   die gestrichelte Linie läuft von links bis zum rechtsbündigen Label.
+   Luft oberhalb bewusst größer als darunter: so gehört das Label sichtbar zum
+   folgenden Modul und trennt es zugleich vom vorhergehenden. */
 .twgb-be-module-label {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-top: 20px;
+  margin-bottom: 7px;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .05em;
@@ -868,7 +938,11 @@ body:not(.rex-theme-light) .pb-panel select.form-control {
   flex: 1 1 auto;
   border-top: 1px dashed var(--pb-border);
 }
-.twgb-be-module + .twgb-be-module { margin-top: 12px; }
+/* Erstes Modul: kein zusaetzlicher Abstand nach oben, die Zell-Metazeile
+   liefert ihn bereits. */
+.twgb-be-module:first-child .twgb-be-module-label { margin-top: 0; }
+/* Abstand zwischen Modulen steckt bereits im margin-top des Labels. */
+.twgb-be-module + .twgb-be-module { margin-top: 0; }
 .twgb-be-cell table { width: 100%; border-collapse: collapse; }
 .twgb-be-cell td, .twgb-be-cell th { padding: 2px 6px; }
 .twgb-be-cell td:first-child, .twgb-be-cell th:first-child { font-size: 12px; color: var(--pb-text-muted); }
