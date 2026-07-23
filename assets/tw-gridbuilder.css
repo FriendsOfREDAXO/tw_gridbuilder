@@ -230,23 +230,39 @@ body.rex-theme-dark .pb-panel {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  min-width: 28px;
+  height: 30px;
+  min-width: 30px;
   padding: 0 8px;
   border: 1px solid var(--pb-border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--pb-bg);
-  color: var(--pb-text-2);
-  font-size: 16px;
+  color: var(--pb-text);
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   transition: all .12s;
 }
-.pb-icon-btn:hover { border-color: var(--pb-border-2); color: var(--pb-text); }
-.pb-icon-btn:disabled { opacity: .35; cursor: default; }
+/* Font-Awesome-Icons in den Buttons einheitlich, ohne rex-icon-Standardabstand */
+.pb-icon-btn > i,
+.pb-icon-btn > .rex-icon {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-block;
+}
+.pb-icon-btn:hover {
+  border-color: var(--pb-accent);
+  color: var(--pb-accent);
+  background: var(--pb-accent-bg);
+}
+.pb-icon-btn:disabled { opacity: .3; cursor: default; }
+.pb-icon-btn:disabled:hover { border-color: var(--pb-border); color: var(--pb-text); background: var(--pb-bg); }
 .pb-icon-btn.active { background: var(--pb-accent-bg); border-color: var(--pb-accent); color: var(--pb-accent); }
 .pb-icon-btn.danger { color: var(--pb-danger); border-color: var(--pb-danger-bd); }
-.pb-icon-btn.danger:hover { background: var(--pb-danger-bg); }
+.pb-icon-btn.danger:hover { background: var(--pb-danger-bg); border-color: var(--pb-danger); color: var(--pb-danger); }
+/* Font-Awesome-Icons auch in den Zell-Aktions-Buttons (mit Text) sauber ausrichten */
+.pb-cell-actions .btn > i,
+.pb-cell-actions .btn > .rex-icon { margin-right: 5px; }
 
 /* Zell-Aktionsleiste im Panel (Duplizieren/Kopieren/Einfügen) */
 .pb-cell-actions {
@@ -427,14 +443,15 @@ body.rex-theme-dark .pb-panel {
   border-radius: 8px;
   color: var(--pb-text-muted);
 }
-.pb-empty-icon { font-size: 32px; margin-bottom: 8px; }
+.pb-empty-icon { font-size: 32px; margin-bottom: 8px; color: var(--pb-text-3); }
+.pb-empty-icon > i, .pb-empty-icon > .rex-icon { font-size: inherit; margin: 0; }
 
 /* ── Side Panel ── */
 .pb-panel {
   position: fixed;
   top: 0; right: 0;
   height: 100vh;
-  width: 680px;
+  width: 860px;
   max-width: 96vw;
   background: var(--pb-bg);
   box-shadow: -6px 0 30px var(--pb-panel-shadow);
@@ -459,15 +476,22 @@ body.rex-theme-dark .pb-panel {
 }
 .pb-panel-close {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
   background: none;
-  border: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 18px;
-  color: var(--pb-text-muted);
-  padding: 2px 6px;
+  font-size: 15px;
+  color: var(--pb-text-3);
   line-height: 1;
+  transition: all .12s;
 }
-.pb-panel-close:hover { color: var(--pb-text-2); }
+.pb-panel-close > i, .pb-panel-close > .rex-icon { margin: 0; line-height: 1; }
+.pb-panel-close:hover { color: var(--pb-danger); border-color: var(--pb-danger-bd); background: var(--pb-danger-bg); }
 
 /* Panel-Body scrollt als Ganzes */
 .pb-panel-body {
@@ -689,6 +713,53 @@ body.rex-theme-dark .pb-panel {
 .pb-resp-col-row { display: flex; align-items: center; gap: 4px; }
 .pb-resp-col-row .pb-range { flex: 1; min-width: 0; }
 .pb-resp-col-row .pb-range-val { min-width: 16px; font-size: 11px; text-align: right; font-weight: 700; color: var(--pb-accent); }
+
+/* ── Border-Radius-Steuerung (Ecken) ── */
+.pb-radius { display: flex; flex-direction: column; gap: 10px; }
+.pb-radius-all {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 8px; border-bottom: 1px dashed var(--pb-border, #e5e7eb);
+}
+.pb-radius-all-lbl { font-size: 11px; font-weight: 700; min-width: 70px; }
+.pb-radius-all .pb-range { flex: 1; }
+.pb-radius-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+}
+.pb-radius-corner { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.pb-radius-corner-lbl { font-size: 10px; font-weight: 700; color: #64748b; white-space: nowrap; }
+
+/* ── Mehrspaltiges Raster im Panel (Hintergrund, Ausrichtung, Erweitert) ── */
+.pb-panel-grid {
+  display: grid; gap: 12px;
+  padding: 12px 16px; border-bottom: 1px solid var(--pb-bg-3);
+}
+.pb-panel-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+.pb-panel-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+.pb-field { min-width: 0; }
+.pb-field .pb-label { margin-bottom: 6px; }
+/* Auf schmaleren Panels (bzw. mobilem Backend) wieder untereinander */
+@media (max-width: 720px) {
+  .pb-panel-grid.cols-2, .pb-panel-grid.cols-3 { grid-template-columns: 1fr; }
+}
+
+/* ── Toggle-Schalter (z.B. „Mobil umkehren", „Schatten bei Hover") ── */
+.pb-toggle {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; user-select: none; font-weight: 500; font-size: 13px;
+  color: var(--pb-text);
+}
+.pb-toggle-track {
+  flex-shrink: 0; width: 40px; height: 22px; border-radius: 11px;
+  background: #374151; position: relative; display: inline-block;
+  transition: background .2s;
+}
+.pb-toggle-track.on { background: #3b82f6; }
+.pb-toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: left .2s;
+}
+.pb-toggle-knob.on { left: 21px; }
 
 /* ── Selects im Panel ── */
 .pb-panel select.form-control {

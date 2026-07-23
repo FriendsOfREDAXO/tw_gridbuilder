@@ -1,5 +1,98 @@
 # Changelog — TW GridBuilder
 
+## [2.8.1] — 2026-07-23
+
+### UI
+- **Aktions-Icons klar erkennbar**: Die zuvor schwer lesbaren Unicode-Glyphen (`⧉ ❐ ⇩ ↑ ↓ ✕ ⚙ ⊞`) in Zeilen-Header, Zell-Aktionen, Modul-Slots und Panel-Kopf durch einheitliche **Font-Awesome-Icons** ersetzt (`fa-cog`, `fa-eye`, `fa-clone`, `fa-copy`, `fa-clipboard`, `fa-arrow-up/down`, `fa-trash`, `fa-times`, `fa-th-large`).
+- Icon-Buttons: kräftigerer Kontrast (volle Textfarbe statt gedämpft), etwas größere Klickfläche (30px), Hover mit Akzent-Fläche; Löschen/Schließen mit Danger-Hover. Alle Buttons haben jetzt `title` + `aria-label`.
+- Nur JS/CSS betroffen — kein Modul-Update, kein CSS-Rebuild nötig.
+
+## [2.8.0] — 2026-07-23
+
+### Neu
+- **Außen-Abstände (margin) für Zeilen und Zellen** — analog zu den Innen-Abständen: eigene Panel-Gruppe „Außen-Abstände" mit **Abstand oben / unten / links-rechts**, jeweils responsiv über drei Breakpoints (Smartphone / Tablet / Desktop). Default überall = 0.
+- Erzeugt `mt-*` / `mb-*` / `mx-*` (+ `md:` / `lg:`-Varianten). Bei **Zeilen** liegt der Außenabstand auf der `<section>` (oben/unten wirkt zwischen Zeilen, links/rechts rückt die ganze Zeile ein), bei **Zellen** auf dem Zell-Element.
+- Neuer wiederverwendbarer UI-Baustein `RESP_RANGE()` für responsive 3-Breakpoint-Regler (reduziert doppeltes Panel-Markup).
+- Backend-Struktur- und Editor-Vorschau zeigen die gesetzten Außen-Abstände (`M↑ / M↓ / M↔` im Editor, „Außen-Abstand"-Tag in der Struktur).
+
+### ⚠️ Nach dem Update erforderlich
+- **CSS neu bauen** (`npm run build`) — die Safelist in `tw-gridbuilder-grid.css` wurde um `mt` / `mb` / `mx` erweitert (`@source inline(...)`), damit Tailwind die neuen Utility-Klassen erzeugt.
+- **Modul aktualisieren!** Der neue `module/output.php` (margin-Klassen auf Section/Zelle) muss in die REDAXO-Modul-Definition übernommen werden (Backend → Module → „Standard (TW GridBuilder)").
+
+### Migration / Kompatibilität — 100 % abwärtskompatibel
+- Alle neuen Felder (`mt`/`mb`/`mx` + `_md`/`_lg`) sind rein additiv, Default `'0'`. Fehlen sie in alten Daten, wird keine margin-Klasse ausgegeben — unveränderte Darstellung.
+
+## [2.7.1] — 2026-07-23
+
+### Fix
+- **Linkmap-Popup schließt sich nach der Auswahl** einer Zielseite jetzt korrekt. Ursache: Die REDAXO-Linkmap setzt nach Auswahl `getElementById('REX_LINK_<id>').value` und ruft anschließend `self.close()`; da das Panel kein solches DOM-Feld nutzt (die Werte kommen aus dem `rex:selectLink`-Event), schlug das `getElementById` fehl und `self.close()` wurde nie erreicht. Fix: `event.preventDefault()` im Handler (offizieller REDAXO-Hook) — das Panel übernimmt Feld-Setzen und Fenster-Schließen selbst. Nur JS betroffen, kein Modul-Update nötig.
+
+## [2.7.0] — 2026-07-23
+
+### Neu
+- **Ganze Zeile / Zelle verlinken** (interner Link): neues Feld „Verlinkung" in Zeilen- und Zellen-Panel. Auswahl der Zielseite über das REDAXO-Struktur-Popup (Linkmap). Default = keine Verlinkung.
+- Ist ein Link gesetzt, rendert das Modul den betreffenden Block als `<a href="…">` statt `<div>` — die **komplette Zeile bzw. Zelle wird klickbar**. Bei Zeilen wird der innere Container zusätzlich `block`, damit Breite/Zentrierung erhalten bleibt.
+- Backend-Struktur- und Editor-Vorschau zeigen einen Link-Tag (`<i class="fa fa-link"></i>` inkl. Artikelname bei Zeilen).
+
+### ⚠️ Hinweis zur Verwendung
+- **Nur für Blöcke ohne eigene Links/Buttons** im Inhalt — verschachtelte `<a>` sind ungültiges HTML. Enthält eine verlinkte Zeile/Zelle ein Modul mit eigenem Link, ist das Ergebnis unzuverlässig.
+- Schutz gegen doppelte Verschachtelung: Ist eine **Zeile** verlinkt, werden Links einzelner **Zellen** dieser Zeile im Output ignoriert.
+
+### ⚠️ Nach dem Update erforderlich
+- **Modul aktualisieren!** Der neue `module/output.php` (Helfer `pb_link_href()` + `<a>`/`<div>`-Umschaltung) muss in die REDAXO-Modul-Definition übernommen werden (Backend → Module → „Standard (TW GridBuilder)").
+
+### Migration / Kompatibilität — 100 % abwärtskompatibel
+- Die neuen Felder (`link`, `link_label`) sind rein additiv, Default `''`. Fehlen sie in alten Daten, rendert der Block wie bisher als `<div>` — keine Darstellungsänderung.
+- Serverseitige Absicherung: `pb_link_href()` akzeptiert nur numerische Artikel-IDs (auch `redaxo://ID`) und löst sie über `rex_getUrl()` auf; ungültige Werte ergeben keinen Link.
+
+## [2.6.0] — 2026-07-23
+
+### Neu
+- **Animationen für Zeilen und Zellen** (animate.css): neue Panel-Gruppe „Animation" mit drei Feldern — **Art der Animation** (gruppiertes Dropdown: Fade / Zoom / Slide / Back / Flip / Spezial), **Verzögerung** (0–5 s) und **Dauer** (Standard / langsam / schnell …). Default überall = keine Animation.
+- Die Animation wird im Frontend **einmalig beim Sichtbarwerden** ausgelöst (`x-data x-intersect-class.once="animate__animated …"`). Bei Zeilen liegt sie auf dem **inneren Container** (Element mit Hintergrund/Ecken), bei Zellen auf der Zelle selbst.
+- Backend-Struktur- und Editor-Vorschau zeigen einen Animations-Tag (`<i class="fa fa-magic"></i> fadeInUp`).
+
+### Voraussetzung
+- **animate.css** und das Alpine-Plugin **alpinejs-intersect-class** müssen im Theme vorhanden/registriert sein (siehe README → „Abhängigkeiten / Frontend"). Fehlt eines, bleibt das ausgegebene Attribut wirkungslos; das Grid rendert normal ohne Animation.
+
+### ⚠️ Nach dem Update erforderlich
+- **Modul aktualisieren!** Der neue `module/output.php` (Helfer `pb_anim_attr()` + Attribut-Ausgabe) muss in die REDAXO-Modul-Definition übernommen werden (Backend → Module → „Standard (TW GridBuilder)"). Solange das Modul nicht aktualisiert ist, werden Animationen nicht ausgegeben.
+- Kein CSS-Rebuild nötig: `animate__*`-Klassen stammen aus animate.css (extern), nicht aus dem Tailwind-Build.
+
+### Migration / Kompatibilität — 100 % abwärtskompatibel
+- Die drei neuen Felder (`anim`, `anim_delay`, `anim_duration`) sind rein additiv, Default `''`. Fehlen sie in alten Daten, wird exakt das bisherige Verhalten gerendert — kein Attribut, keine Darstellungsänderung.
+- Serverseitige Absicherung: `pb_anim_attr()` lässt nur `animate__[A-Za-z]+`-Klassen, Delay `1–5` und die vier bekannten Dauer-Klassen durch (keine Attribut-Injection).
+
+## [2.5.0] — 2026-07-22
+
+### Neu
+- **Panel verbreitert** (680px → 860px) und Felder für Zeilen **und** Zellen neu strukturiert: Hintergrund (Farbe/Bild/Video) steht jetzt nebeneinander in einer Reihe, ebenso Text- und vertikale Ausrichtung — deutlich kompakter, weniger Scrollen.
+- **„Schatten bei Hover"**: neuer Schieberegler-Toggle (wie „Mobil umkehren") für Zeilen und Zellen — fügt `hover:shadow-xl transition-shadow duration-300` hinzu.
+- **Eigene CSS-Klasse**: neues Freitextfeld für Zeilen und Zellen, um zusätzliche, projektspezifische Klassen zu ergänzen. Wird sowohl im Browser (Whitelist-Filter beim Tippen) als auch serverseitig (`pb_custom_class()`) auf klassentaugliche Zeichen beschränkt (Buchstaben, Ziffern, Leerzeichen, `-_:`) — verhindert Markup-/Attribut-Injection.
+- Neue Gruppe „Effekte & Erweitert" im Panel für beide Bereiche.
+
+### ⚠️ Nach dem Update erforderlich
+- **Modul aktualisieren!** Der Modul-Output/-Input muss nach dem Addon-Update in die REDAXO-Modul-Definition übernommen werden (Backend → Module → „Standard (TW GridBuilder)", Code aus `module/output.php` + `module/input.php` einspielen). Solange das Modul nicht aktualisiert ist, greifen weder die neuen Ecken (bereits mit 2.4.0 eingeführt) noch Hover-Schatten/eigene CSS-Klasse.
+- **CSS neu bauen** (`npm run build`) — `hover:shadow-xl transition-shadow duration-300` ist über `@source inline(...)` in der Addon-eigenen `tw-gridbuilder-grid.css` safegelistet.
+
+### Migration / Kompatibilität — 100 % abwärtskompatibel
+- Beide neuen Felder (`shadow_hover`, `custom_class`) sind rein additiv, Default `false` / `''`. Fehlen sie in alten Daten, wird exakt das bisherige Verhalten gerendert — keine zusätzliche Klasse, keine Darstellungsänderung.
+- Geprüft: alte Slices ohne diese Felder rendern unverändert; ein `<script>`-Injection-Versuch im Freitextfeld wird zu reinem Text bereinigt.
+
+## [2.4.0] — 2026-07-22
+
+### Neu
+- **Abgerundete Ecken pro Ecke** für Zeilen **und** Zellen: Statt der bisherigen An/Aus-Checkbox (`rounded-lg`) gibt es jetzt Schieberegler entlang der Tailwind-v4-Skala (0 → `xs` → `sm` → `md` → `lg` → `xl` → `2xl` → `3xl` → `4xl` → `full`, Standard 0). Jede Ecke (oben links, oben rechts, unten links, unten rechts) ist einzeln steuerbar, plus ein „Alle Ecken"-Regler, der alle vier gleichzeitig setzt. Bei gesetztem Radius mit Hintergrundbild/-video wird automatisch `overflow-hidden` ergänzt, damit der Hintergrund sauber beschnitten wird.
+
+### ⚠️ Nach dem Update erforderlich
+- **Modul aktualisieren!** Der Modul-Output/-Input muss nach dem Addon-Update in die REDAXO-Modul-Definition übernommen werden (Backend → Module → „Standard (TW GridBuilder)", Code aus `module/output.php` + `module/input.php` einspielen). Solange das Modul nicht aktualisiert ist, werden die neuen abgerundeten Ecken **nicht gerendert** (die Slider im Editor funktionieren dennoch).
+- **CSS neu bauen** (`npm run build`), damit die per-Ecke-Klassen im kompilierten CSS enthalten sind (siehe unten).
+
+### Migration / Kompatibilität — 100 % abwärtskompatibel
+- **Bestehende Inhalte bleiben unverändert.** Alte Zellen ohne Radius-Angabe rendern exakt wie zuvor (keine Ecken). Alte Zellen mit der früheren Checkbox (`rounded: true`) werden automatisch auf alle Ecken = `lg` gesetzt — **visuell identisch** zum bisherigen `rounded-lg`. Kein Datenverlust, keine geänderte Darstellung bestehender Seiten.
+- Neue Felder sind rein additiv (`radius_tl/tr/bl/br`); fehlen sie in alten Daten, wird 0 (keine Ecke) angenommen.
+- Die 36 per-Ecke-Klassen (`rounded-{tl,tr,bl,br}-{xs…full}`) sind über `@source inline(...)` in `theme/private/styles/app.css` safegelistet (Tailwind v4).
+
 ## [2.3.4] — 2026-07-22
 
 ### Verbessert

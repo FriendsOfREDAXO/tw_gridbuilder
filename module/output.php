@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.2.0
+ * @version 2.8.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -26,6 +26,94 @@ if (empty($pb_data['rows'])) {
     return;
 }
 
+// Helfer: Border-Radius-Klassen pro Ecke (Tailwind-v4-Skala)
+// radius_tl/tr/bl/br = Index 0-9 (0 = keine, sonst xs/sm/md/lg/xl/2xl/3xl/4xl/full)
+// Rückwärtskompatibilität: altes boolean-Feld 'rounded' → alle Ecken 'lg' (Index 4)
+if (!function_exists('pb_radius_classes')) :
+function pb_radius_classes(array $obj): string {
+    $scale  = ['', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', 'full']; // Index 0-9
+    $legacy = !empty($obj['rounded']);
+    $parts  = [];
+    foreach (['tl', 'tr', 'bl', 'br'] as $corner) {
+        $idx = (int)($obj['radius_' . $corner] ?? 0);
+        if ($idx <= 0 && $legacy) $idx = 4; // lg
+        if ($idx <= 0 || $idx >= count($scale)) continue;
+        $parts[] = 'rounded-' . $corner . '-' . $scale[$idx];
+    }
+    return implode(' ', $parts);
+}
+endif;
+
+// Helfer: Freitext „Eigene CSS-Klasse" serverseitig absichern (defense in depth,
+// die JS-Eingabe filtert bereits im Panel). Nur Klassen-taugliche Zeichen.
+if (!function_exists('pb_custom_class')) :
+function pb_custom_class(array $obj): string {
+    $v = (string)($obj['custom_class'] ?? '');
+    return trim(preg_replace('/[^a-zA-Z0-9\s\-_:]/', '', $v));
+}
+endif;
+
+// Helfer: Animation. Baut das Alpine-Attribut, das animate.css beim
+// Sichtbarwerden einmalig auslöst. Voraussetzung im Theme: animate.css +
+// alpinejs-intersect-class (Plugin). Ohne Animation → leerer String.
+// anim          = animate.css-Klasse (z.B. 'animate__fadeInUp')
+// anim_delay    = '' | '1'..'5'  → animate__delay-Ns
+// anim_duration = '' | 'animate__slow' | 'animate__slower' | 'animate__fast' | 'animate__faster'
+if (!function_exists('pb_anim_attr')) :
+function pb_anim_attr(array $obj): string {
+    // nur bekannte animate.css-Klassen zulassen (defense in depth)
+    $anim = (string)($obj['anim'] ?? '');
+    if ($anim === '' || !preg_match('/^animate__[A-Za-z]+$/', $anim)) return '';
+
+    $classes = ['animate__animated', $anim];
+
+    $delay = (string)($obj['anim_delay'] ?? '');
+    if (preg_match('/^[1-5]$/', $delay)) {
+        $classes[] = 'animate__delay-' . $delay . 's';
+    }
+
+    $duration = (string)($obj['anim_duration'] ?? '');
+    if (in_array($duration, ['animate__slow', 'animate__slower', 'animate__fast', 'animate__faster'], true)) {
+        $classes[] = $duration;
+    }
+
+    $cls = htmlspecialchars(implode(' ', $classes), ENT_QUOTES);
+    return 'x-data x-intersect-class.once="' . $cls . '"';
+}
+endif;
+
+// Helfer: Kurzlabel für Backend-Tags („animate__fadeInUp" → „fadeInUp")
+if (!function_exists('pb_anim_label')) :
+function pb_anim_label(array $obj): string {
+    $anim = (string)($obj['anim'] ?? '');
+    return $anim !== '' ? preg_replace('/^animate__/', '', $anim) : '';
+}
+endif;
+
+// Helfer: interner Link. 'link' enthält eine REDAXO-Artikel-ID (auch als
+// redaxo://ID toleriert). Gibt die aufgelöste URL zurück oder '' (kein/ungültig).
+// Nur interne Artikel-IDs werden akzeptiert (defense in depth).
+if (!function_exists('pb_link_href')) :
+function pb_link_href(array $obj): string {
+    $link = trim((string)($obj['link'] ?? ''));
+    if ($link === '') return '';
+    if (preg_match('#^redaxo://(\d+)#', $link, $m)) $link = $m[1];
+    if (!ctype_digit($link)) return '';
+    $url = rex_getUrl((int) $link);
+    return $url ?: '';
+}
+endif;
+
+// Helfer: Außen-Abstand (margin) gesetzt? Für Backend-Tags.
+if (!function_exists('pb_has_margin')) :
+function pb_has_margin(array $obj): bool {
+    foreach (['mt','mt_md','mt_lg','mb','mb_md','mb_lg','mx','mx_md','mx_lg'] as $k) {
+        if ((string)($obj[$k] ?? '0') !== '0') return true;
+    }
+    return false;
+}
+endif;
+
 // ── Backend: Strukturübersicht mit echtem Moduloutput ───────────────────────
 if (rex::isBackend()) {
     echo '<div class="twgb-be-wrap twgb-root">';
@@ -38,7 +126,13 @@ if (rex::isBackend()) {
         if (!empty($pb_row['bg_image']))                                                 $pb_tags[] = '<i class="rex-icon fa fa-image"></i> ' . htmlspecialchars($pb_row['bg_image']);
         if (!empty($pb_row['bg_video']))                                                 $pb_tags[] = '<i class="rex-icon fa fa-film"></i> ' . htmlspecialchars($pb_row['bg_video']);
         if (!empty($pb_row['gap']) && $pb_row['gap'] !== '4')                           $pb_tags[] = 'Gap ' . $pb_row['gap'];
+        if (pb_has_margin($pb_row))                                                      $pb_tags[] = '<i class="rex-icon fa fa-expand"></i> Außen-Abstand';
         if (!empty($pb_row['mobile_reverse']))                                           $pb_tags[] = '<i class="rex-icon fa fa-mobile"></i> Mobil';
+        if (pb_radius_classes($pb_row) !== '')                                           $pb_tags[] = '<i class="rex-icon fa fa-circle-notch"></i> Ecken';
+        if (!empty($pb_row['shadow_hover']))                                              $pb_tags[] = '<i class="rex-icon fa fa-square-o"></i> Hover-Schatten';
+        if (pb_custom_class($pb_row) !== '')                                              $pb_tags[] = '.' . htmlspecialchars(pb_custom_class($pb_row), ENT_QUOTES);
+        if (pb_anim_label($pb_row) !== '')                                                $pb_tags[] = '<i class="rex-icon fa fa-magic"></i> ' . htmlspecialchars(pb_anim_label($pb_row), ENT_QUOTES);
+        if (pb_link_href($pb_row) !== '')                                                 $pb_tags[] = '<i class="rex-icon fa fa-link"></i> ' . htmlspecialchars((string)($pb_row['link_label'] ?? '') ?: ('Artikel ' . (string)($pb_row['link'] ?? '')), ENT_QUOTES);
 
         echo '<div class="twgb-be-row">';
         echo '<div class="twgb-be-row-header">';
@@ -67,9 +161,14 @@ if (rex::isBackend()) {
             if (!empty($pb_cell['py_top'])    && $pb_cell['py_top']    !== '0')     $pb_cell_right[] = '↑ ' . $pb_cell['py_top'];
             if (!empty($pb_cell['py_bottom']) && $pb_cell['py_bottom'] !== '0')     $pb_cell_right[] = '↓ ' . $pb_cell['py_bottom'];
             if (!empty($pb_cell['px'])        && $pb_cell['px']        !== '0')     $pb_cell_right[] = '↔ ' . $pb_cell['px'];
+            if (pb_has_margin($pb_cell))                                             $pb_cell_right[] = '<i class="rex-icon fa fa-expand"></i>';
             if (!empty($pb_cell['align'])     && $pb_cell['align']     !== 'start') $pb_cell_right[] = $pb_cell['align'] === 'center' ? 'Mitte' : 'Unten';
             if (!empty($pb_cell['text_align']))                                      $pb_cell_right[] = htmlspecialchars($pb_cell['text_align']);
-            if (!empty($pb_cell['rounded']))                                         $pb_cell_right[] = '<i class="rex-icon fa fa-circle-notch"></i>';
+            if (pb_radius_classes($pb_cell) !== '')                                   $pb_cell_right[] = '<i class="rex-icon fa fa-circle-notch"></i>';
+            if (!empty($pb_cell['shadow_hover']))                                     $pb_cell_right[] = '<i class="rex-icon fa fa-square-o"></i>';
+            if (pb_custom_class($pb_cell) !== '')                                     $pb_cell_right[] = '.' . htmlspecialchars(pb_custom_class($pb_cell), ENT_QUOTES);
+            if (pb_anim_label($pb_cell) !== '')                                       $pb_cell_right[] = '<i class="rex-icon fa fa-magic"></i>';
+            if (pb_link_href($pb_cell) !== '')                                        $pb_cell_right[] = '<i class="rex-icon fa fa-link"></i>';
 
             echo '<div class="twgb-be-cell" style="flex:' . $pb_span . '">';
             echo '<div class="twgb-be-cell-meta">';
@@ -157,6 +256,10 @@ foreach ($pb_data['rows'] as $row) {
     $gap_base      = (string)($row['gap']          ?? '4');
     $gap_md        = (string)($row['gap_md']       ?? $gap_base);
     $gap_lg        = (string)($row['gap_lg']       ?? $gap_md);
+    // Außen-Abstände (margin) der Zeile → auf die <section>
+    $m_top_base    = (string)($row['mt']    ?? '0'); $m_top_md = (string)($row['mt_md'] ?? $m_top_base); $m_top_lg = (string)($row['mt_lg'] ?? $m_top_md);
+    $m_bot_base    = (string)($row['mb']    ?? '0'); $m_bot_md = (string)($row['mb_md'] ?? $m_bot_base); $m_bot_lg = (string)($row['mb_lg'] ?? $m_bot_md);
+    $m_x_base      = (string)($row['mx']    ?? '0'); $m_x_md   = (string)($row['mx_md'] ?? $m_x_base);   $m_x_lg   = (string)($row['mx_lg'] ?? $m_x_md);
     $bg            = htmlspecialchars($row['bg'] ?? '', ENT_QUOTES);
     $bg_image      = $row['bg_image'] ?? '';
     $bg_video      = $row['bg_video'] ?? '';
@@ -174,14 +277,33 @@ foreach ($pb_data['rows'] as $row) {
         $text_align,
         pb_resp_class($py_top_base, $py_top_md, $py_top_lg, 'pt-'),
         pb_resp_class($py_bot_base, $py_bot_md, $py_bot_lg, 'pb-'),
+        ($m_top_base !== '0' || $m_top_md !== '0' || $m_top_lg !== '0') ? pb_resp_class($m_top_base, $m_top_md, $m_top_lg, 'mt-') : '',
+        ($m_bot_base !== '0' || $m_bot_md !== '0' || $m_bot_lg !== '0') ? pb_resp_class($m_bot_base, $m_bot_md, $m_bot_lg, 'mb-') : '',
+        ($m_x_base   !== '0' || $m_x_md   !== '0' || $m_x_lg   !== '0') ? pb_resp_class($m_x_base, $m_x_md, $m_x_lg, 'mx-') : '',
         $bg_on_section && $bg_video ? 'relative z-10' : '',
     ]));
+
+    $row_radius       = pb_radius_classes($row);
+    $row_shadow_hover = !empty($row['shadow_hover']);
+    $row_custom_class = pb_custom_class($row);
+    $row_anim_attr    = pb_anim_attr($row); // Animation auf inneren Container
+    $row_link_href    = pb_link_href($row); // ganze Zeile als interner Link
 
     $container_classes = implode(' ', array_filter([
         $inner_width,
         !$bg_on_section ? $bg : '',
         !$bg_on_section && $bg_video ? 'relative z-10' : '',
+        $row_radius,
+        $row_radius && ($bg_image || $bg_video) ? 'overflow-hidden' : '',
+        $row_shadow_hover ? 'hover:shadow-xl transition-shadow duration-300' : '',
+        // Als Link ist der Container ein <a> (inline) → block, damit Container-Breite/Zentrierung greift
+        $row_link_href ? 'block' : '',
+        $row_custom_class,
     ]));
+
+    // Container-Element: <a> wenn Zeile verlinkt, sonst <div>
+    $row_tag       = $row_link_href ? 'a' : 'div';
+    $row_href_attr = $row_link_href ? ' href="' . htmlspecialchars($row_link_href, ENT_QUOTES) . '"' : '';
 
     echo '<section class="' . $section_classes . '"' . ($bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . '>';
 
@@ -189,7 +311,7 @@ foreach ($pb_data['rows'] as $row) {
         echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
     }
 
-    echo '<div class="' . $container_classes . '"' . (!$bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . '>';
+    echo '<' . $row_tag . ' class="' . $container_classes . '"' . $row_href_attr . (!$bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . ($row_anim_attr ? ' ' . $row_anim_attr : '') . '>';
 
     if (!$bg_on_section && $bg_video) {
         echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
@@ -231,12 +353,24 @@ foreach ($pb_data['rows'] as $row) {
         $cell_px_base   = (string)($cell['px']           ?? '0');
         $cell_px_md     = (string)($cell['px_md']        ?? $cell_px_base);
         $cell_px_lg     = (string)($cell['px_lg']        ?? $cell_px_md);
+        // Außen-Abstände (margin) der Zelle
+        $cell_mt_base   = (string)($cell['mt']    ?? '0'); $cell_mt_md = (string)($cell['mt_md'] ?? $cell_mt_base); $cell_mt_lg = (string)($cell['mt_lg'] ?? $cell_mt_md);
+        $cell_mb_base   = (string)($cell['mb']    ?? '0'); $cell_mb_md = (string)($cell['mb_md'] ?? $cell_mb_base); $cell_mb_lg = (string)($cell['mb_lg'] ?? $cell_mb_md);
+        $cell_mx_base   = (string)($cell['mx']    ?? '0'); $cell_mx_md = (string)($cell['mx_md'] ?? $cell_mx_base); $cell_mx_lg = (string)($cell['mx_lg'] ?? $cell_mx_md);
         $cell_bg        = htmlspecialchars($cell['bg'] ?? '', ENT_QUOTES);
         $cell_bg_image  = $cell['bg_image'] ?? '';
         $cell_bg_video  = $cell['bg_video'] ?? '';
         $cell_align     = in_array($cell['align'] ?? '', ['start','center','end']) ? $cell['align'] : 'start';
         $cell_text_align = htmlspecialchars($cell['text_align'] ?? '', ENT_QUOTES);
-        $cell_rounded   = !empty($cell['rounded']);
+        $cell_radius       = pb_radius_classes($cell);
+        $cell_shadow_hover = !empty($cell['shadow_hover']);
+        $cell_custom_class = pb_custom_class($cell);
+        $cell_anim_attr    = pb_anim_attr($cell);
+        // Ganze Zelle als interner Link — aber nur, wenn die Zeile nicht bereits
+        // ein <a> ist (verschachtelte Links wären ungültiges HTML).
+        $cell_link_href    = $row_link_href ? '' : pb_link_href($cell);
+        $cell_tag          = $cell_link_href ? 'a' : 'div';
+        $cell_href_attr    = $cell_link_href ? ' href="' . htmlspecialchars($cell_link_href, ENT_QUOTES) . '"' : '';
         $cell_style = $cell_bg_image ? ' style="' . pb_bg_image_style($cell_bg_image) . '"' : '';
 
         $cell_classes = array_filter([
@@ -244,18 +378,24 @@ foreach ($pb_data['rows'] as $row) {
             $cell_pt_base !== '0' || $cell_pt_md !== '0' || $cell_pt_lg !== '0' ? pb_resp_class($cell_pt_base, $cell_pt_md, $cell_pt_lg, 'pt-') : '',
             $cell_pb_base !== '0' || $cell_pb_md !== '0' || $cell_pb_lg !== '0' ? pb_resp_class($cell_pb_base, $cell_pb_md, $cell_pb_lg, 'pb-') : '',
             $cell_px_base !== '0' || $cell_px_md !== '0' || $cell_px_lg !== '0' ? pb_resp_class($cell_px_base, $cell_px_md, $cell_px_lg, 'px-') : '',
+            $cell_mt_base !== '0' || $cell_mt_md !== '0' || $cell_mt_lg !== '0' ? pb_resp_class($cell_mt_base, $cell_mt_md, $cell_mt_lg, 'mt-') : '',
+            $cell_mb_base !== '0' || $cell_mb_md !== '0' || $cell_mb_lg !== '0' ? pb_resp_class($cell_mb_base, $cell_mb_md, $cell_mb_lg, 'mb-') : '',
+            $cell_mx_base !== '0' || $cell_mx_md !== '0' || $cell_mx_lg !== '0' ? pb_resp_class($cell_mx_base, $cell_mx_md, $cell_mx_lg, 'mx-') : '',
             $cell_align === 'center' ? 'flex flex-col justify-center' : '',
             $cell_align === 'end'    ? 'flex flex-col justify-end'    : '',
             $cell_text_align,
-            $cell_rounded   ? 'rounded-lg' : '',
+            $cell_radius,
+            $cell_radius && ($cell_bg_image || $cell_bg_video) ? 'overflow-hidden' : '',
             $cell_bg,
             $cell_bg_video  ? 'relative z-10' : '',
+            $cell_shadow_hover ? 'hover:shadow-xl transition-shadow duration-300' : '',
+            $cell_custom_class,
             'twgb-cell',
             'twgb-cell--' . ($cell_index + 1) . '-of-' . $row_cols_count,
             'twgb-cell--span-' . $span,
         ]);
 
-        echo '<div class="' . implode(' ', $cell_classes) . '"' . $cell_style . '>';
+        echo '<' . $cell_tag . ' class="' . implode(' ', $cell_classes) . '"' . $cell_href_attr . $cell_style . ($cell_anim_attr ? ' ' . $cell_anim_attr : '') . '>';
 
         if ($cell_bg_video) {
             echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($cell_bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
@@ -289,10 +429,10 @@ foreach ($pb_data['rows'] as $row) {
             }
         }
 
-        echo '</div>';
+        echo '</' . $cell_tag . '>';
     }
 
-    echo '</div></div></section>';
+    echo '</div></' . $row_tag . '></section>';
 }
 
 

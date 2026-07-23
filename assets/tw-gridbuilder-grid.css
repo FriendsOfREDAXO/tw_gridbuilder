@@ -17,10 +17,14 @@
    Tailwind-v4-Build eingebunden ist (Standalone-Nutzung ignoriert @source). */
 @source inline("grid grid-cols-12 mx-auto w-full");
 @source inline("col-span-{1..12}");
-@source inline("{,md:,lg:}{pt,pb,px,gap}-{0..16}");
+@source inline("{,md:,lg:}{pt,pb,px,mt,mb,mx,gap}-{0..16}");
 @source inline("flex flex-col justify-{center,end} items-{start,center,end}");
-@source inline("text-{left,center,right} rounded-lg relative z-10");
+@source inline("text-{left,center,right} rounded-lg relative z-10 overflow-hidden");
 @source inline("bg-{white,black} bg-{primary,secondary}-500 bg-neutral-{50,100,200}");
+/* Border-Radius pro Ecke (Zeilen & Zellen), Tailwind-v4-Skala 0/xs…full */
+@source inline("rounded-{tl,tr,bl,br}-{xs,sm,md,lg,xl,2xl,3xl,4xl,full}");
+/* Schatten bei Hover (Zeilen & Zellen) */
+@source inline("hover:shadow-xl transition-shadow duration-300");
 
 /* ── pb-section Basis ── */
 .pb-section { display: block; }

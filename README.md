@@ -4,6 +4,20 @@ Flexibler Tailwind-Grid-Pagebuilder für REDAXO 5. Ermöglicht das visuelle Aufb
 
 ---
 
+## ⚠️ Grundregel: Updates müssen 100 % abwärtskompatibel sein
+
+**Jede Änderung am Addon muss auf einer Live-Seite gefahrlos einspielbar sein — bestehende Inhalte dürfen sich weder verändern noch kaputtgehen.**
+
+Verbindliche Regeln für jede Weiterentwicklung:
+
+- **Neue Felder immer additiv** einführen und in `module/output.php` mit Default absichern (`$obj['neu'] ?? 0`). Fehlt ein Feld in alten Daten (JSON in `rex_article_slice`), muss das exakte bisherige Verhalten herauskommen.
+- **Umbenannte/ersetzte Felder** brauchen eine Migration in `assets/tw-gridbuilder.js` (`migrate*`-Funktionen), die alte Werte verlustfrei und **visuell identisch** überführt (Beispiel: altes `rounded:true` → alle Ecken `lg`, entspricht dem früheren `rounded-lg`).
+- **Vor jedem Release** mit echten Alt-Daten testen: alte Seite öffnen, Slice ohne die neuen Felder rendern → Ausgabe muss unverändert sein.
+- **Wenn eine Änderung bestehende Angaben doch beeinflussen könnte:** nicht still einbauen — im CHANGELOG unter „⚠️ Breaking / Achtung" klar dokumentieren **und** den Betreiber aktiv darauf hinweisen.
+- **Nach dem Addon-Update muss das Modul aktualisiert werden** (Modul-Code aus `module/output.php` + `module/input.php` in die REDAXO-Modul-Definition übernehmen), sonst greift der neue Output nicht.
+
+---
+
 **Setzt einen Tailwind-v4-Build voraus**
 
 TW GridBuilder generiert Tailwind-Utility-Klassen (Grid, Spacing, Container, Hintergrundfarben). Ab Version 2.2.0 werden diese Klassen **vom Tailwind-Build des Projekts erzeugt** (Farben stammen aus den Theme-Variablen, Responsive-Varianten funktionieren korrekt), nicht mehr als vorkompilierte, unlayered Utilities mitgeliefert. `tw-gridbuilder-grid.css` enthält dazu eine Tailwind-`@source inline(...)`-Safelist plus die wenigen echten Custom-Klassen (Video-Hintergrund, Mobile-Reihenfolge). Voraussetzung ist daher, dass die Datei per `@import` in einen **Tailwind-v4-Build** eingebunden ist — siehe „Grid-CSS in den Build-Prozess einbinden".
@@ -29,10 +43,20 @@ TW GridBuilder selbst hat keine harte Abhängigkeit zu MForm oder Focuspoint —
 |---|---|---|
 | [MForm](https://github.com/FriendsOfREDAXO/mform) | Wird von den *Inhaltsmodulen*, die in den Zellen platziert werden, für deren eigene Formularfelder genutzt — nicht von tw_gridbuilder selbst | Kein Einfluss auf tw_gridbuilder; nur relevant, falls einzelne Inhaltsmodule MForm voraussetzen |
 | [Focuspoint](https://github.com/FriendsOfREDAXO/focuspoint) | Bildausschnitt für Hintergrundbilder (Zeilen & Zellen) | Fallback auf `background-position: 50% 50%` (Bild-Center), keine Fehler |
+| [animate.css](https://animate.style) + [alpinejs-intersect-class](https://github.com/markmead/alpinejs-intersect-class) | **Voraussetzung für die Animationen** (Zeilen & Zellen). Wird nur benötigt, wenn im Panel eine Animation ausgewählt ist | Ohne animate.css/Plugin passiert nichts — es wird lediglich das Attribut `x-intersect-class.once="animate__animated …"` ausgegeben, das ohne die Bibliothek wirkungslos bleibt (keine Fehler, keine Darstellungsänderung) |
 
 ### Frontend
 
-tw_gridbuilder selbst rendert reines HTML/CSS (Grid, Spacing, Container) — kein JavaScript nötig. Tailwind bzw. Alpine.js sind nur relevant, falls einzelne *Inhaltsmodule* in den Zellen sie voraussetzen (z.B. für eigene Farb-/Typografie-Klassen oder reaktive Interaktionen) — das hängt vom jeweiligen Modul ab, nicht von tw_gridbuilder.
+tw_gridbuilder selbst rendert reines HTML/CSS (Grid, Spacing, Container) — für das Grundlayout ist **kein JavaScript nötig**.
+
+**Ausnahme Animationen:** Wählt man im Panel für eine Zeile oder Zelle eine Animation, gibt das Modul das Alpine-Attribut `x-data x-intersect-class.once="animate__animated …"` aus. Das setzt im Theme zwei Dinge voraus:
+
+1. **[animate.css](https://animate.style)** (die `animate__*`-Klassen) — z.B. via npm oder CDN eingebunden.
+2. **[alpinejs-intersect-class](https://github.com/markmead/alpinejs-intersect-class)** als Alpine-Plugin registriert (`Alpine.plugin(intersectClass)`) — löst die Animation einmalig aus, sobald das Element ins Sichtfeld scrollt.
+
+Fehlt eines von beiden, bleibt das Attribut folgenlos — das Grid rendert normal, nur ohne Animation.
+
+Tailwind bzw. Alpine.js sind darüber hinaus nur relevant, falls einzelne *Inhaltsmodule* in den Zellen sie voraussetzen — das hängt vom jeweiligen Modul ab, nicht von tw_gridbuilder.
 
 ### Backend (wird vom Addon selbst geladen)
 
@@ -200,14 +224,17 @@ Jede Zeile und jede Zelle bekommt im Frontend zusätzlich zu den Layout-Utility-
 |---|---|---|
 | Container | `standard`, `full` | `container mx-auto px-4` / `w-full px-4` |
 | Breite des Inhalts | `standard`, `full` | erzwingt `container` / `w-full` |
-| Abstand oben | 0–16 pro Breakpoint | `pt-{n} md:pt-{n} lg:pt-{n}` |
-| Abstand unten | 0–16 pro Breakpoint | `pb-{n} md:pb-{n} lg:pb-{n}` |
+| Abstand oben (innen) | 0–16 pro Breakpoint | `pt-{n} md:pt-{n} lg:pt-{n}` |
+| Abstand unten (innen) | 0–16 pro Breakpoint | `pb-{n} md:pb-{n} lg:pb-{n}` |
 | Spalten-Gap | 0–16 pro Breakpoint | `gap-{n} md:gap-{n} lg:gap-{n}` |
+| Außen oben/unten/seitl. | 0–16 pro Breakpoint | `mt-*` / `mb-*` / `mx-*` (+ `md:`/`lg:`) auf der `<section>` |
 | Hintergrundfarbe | TW-Klasse | direkt als Klasse |
 | Hintergrundbild | Dateiname | `background-image` Style + Focuspoint |
 | Hintergrundvideo | Dateiname | `.video-docker` |
 | Textausrichtung | `text-left`, `text-center`, `text-right` | direkt als Klasse |
 | Mobil umkehren | bool | `pb-mobile-reverse` |
+| Animation | animate.css-Klasse + Verzögerung + Dauer | `x-intersect-class.once="animate__animated …"` auf dem inneren Container (setzt animate.css + `alpinejs-intersect-class` voraus) |
+| Verlinkung | interne Artikel-ID | rendert die Zeile als `<a href="…">` (ganze Zeile klickbar) statt `<div>` |
 
 ## Zellen-Einstellungen
 
@@ -217,11 +244,14 @@ Jede Zeile und jede Zelle bekommt im Frontend zusätzlich zu den Layout-Utility-
 | Abstand oben | 0–16 pro Breakpoint | `pt-{n} md:pt-{n} lg:pt-{n}` |
 | Abstand unten | 0–16 pro Breakpoint | `pb-{n} md:pb-{n} lg:pb-{n}` |
 | Innen links/rechts | 0–16 pro Breakpoint | `px-{n} md:px-{n} lg:px-{n}` |
+| Außen oben/unten/seitl. | 0–16 pro Breakpoint | `mt-*` / `mb-*` / `mx-*` (+ `md:`/`lg:`) auf dem Zell-Element |
 | Ausrichtung vertikal | `start`, `center`, `end` | — / `flex flex-col justify-center` / `flex flex-col justify-end` |
 | Abgerundet | bool | `rounded-lg` |
 | Hintergrundfarbe | TW-Klasse | direkt als Klasse |
 | Hintergrundbild | Dateiname | `background-image` Style + Focuspoint |
 | Hintergrundvideo | Dateiname | `.video-docker` |
+| Animation | animate.css-Klasse + Verzögerung + Dauer | `x-intersect-class.once="animate__animated …"` (setzt animate.css + `alpinejs-intersect-class` voraus) |
+| Verlinkung | interne Artikel-ID | rendert die Zelle als `<a href="…">` (ganze Zelle klickbar). Wird ignoriert, wenn die übergeordnete Zeile bereits verlinkt ist |
 
 ---
 
