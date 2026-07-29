@@ -17,7 +17,8 @@
    Tailwind-v4-Build eingebunden ist (Standalone-Nutzung ignoriert @source). */
 @source inline("grid grid-cols-12 mx-auto w-full");
 @source inline("col-span-{1..12}");
-@source inline("{,md:,lg:}{pt,pb,px,mt,mb,mx,gap}-{0..16}");
+@source inline("{,md:,lg:}{pt,pb,px,mt,mb,mx}-{0..64}");
+@source inline("{,md:,lg:}gap-{0..16}");
 @source inline("flex flex-col justify-{center,end} items-{start,center,end}");
 @source inline("text-{left,center,right} rounded-lg relative z-10 overflow-hidden");
 @source inline("bg-{white,black} bg-{primary,secondary}-500 bg-neutral-{50,100,200}");

@@ -939,12 +939,12 @@
 
     // ── Responsiver Abstands-Regler (aufklappbar auf drei Breakpoints) ───────
     // t = Zielobjekt, key = Basis-Feldname (Felder: key, key_md, key_lg).
-    const RESP_ROW = (t, key, label) => `
+    const RESP_ROW = (t, key, label, max = 64) => `
       <div class="pb-ctl" :class="{ 'pb-ctl-open': respOpen(${t}, '${key}') }">
         <div class="pb-ctl-main">
           <label class="pb-ctl-label">${label}</label>
           <template v-if="!respOpen(${t}, '${key}')">
-            ${SLIDER(`${t}.${key}`, `respSetAll(${t}, '${key}', $VAL)`, 0, 16)}
+            ${SLIDER(`${t}.${key}`, `respSetAll(${t}, '${key}', $VAL)`, 0, max)}
           </template>
           <span v-else class="pb-ctl-summary">{{ ${t}.${key} }} / {{ ${t}.${key}_md }} / {{ ${t}.${key}_lg }}</span>
           <button type="button" class="pb-ctl-bp"
@@ -955,9 +955,9 @@
           </button>
         </div>
         <div v-if="respOpen(${t}, '${key}')" class="pb-ctl-bps">
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-mobile"></i> Smartphone</span>${SLIDER(`${t}.${key}`, `${t}.${key} = $VAL`, 0, 16)}</div>
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-tablet"></i> Tablet</span>${SLIDER(`${t}.${key}_md`, `${t}.${key}_md = $VAL`, 0, 16)}</div>
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-desktop"></i> Desktop</span>${SLIDER(`${t}.${key}_lg`, `${t}.${key}_lg = $VAL`, 0, 16)}</div>
+          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-mobile"></i> Smartphone</span>${SLIDER(`${t}.${key}`, `${t}.${key} = $VAL`, 0, max)}</div>
+          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-tablet"></i> Tablet</span>${SLIDER(`${t}.${key}_md`, `${t}.${key}_md = $VAL`, 0, max)}</div>
+          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-desktop"></i> Desktop</span>${SLIDER(`${t}.${key}_lg`, `${t}.${key}_lg = $VAL`, 0, max)}</div>
         </div>
       </div>`;
 
@@ -1556,7 +1556,7 @@
           <div class="pb-sub-label">Innen-Abstände</div>
           ${RESP_ROW('panel.row', 'py_top', '↑ Oben')}
           ${RESP_ROW('panel.row', 'py_bottom', '↓ Unten')}
-          ${RESP_ROW('panel.row', 'gap', '⇄ Spalten-Gap')}
+          ${RESP_ROW('panel.row', 'gap', '⇄ Spalten-Gap', 16)}
 
           <div class="pb-sub-label">Außen-Abstände</div>
           ${RESP_ROW('panel.row', 'mt', '↑ Oben')}

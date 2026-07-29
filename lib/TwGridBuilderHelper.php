@@ -83,6 +83,15 @@ class Helper
             },
             $code
         );
+        // REX_MEDIALIST[n], REX_MEDIALIST[id=n ...] → Dateiliste aus __medialist_n (via addMedialistField).
+        $code = preg_replace_callback(
+            "/(['\"]?)REX_MEDIALIST\[(?:id=)?(\d+)(?:\s+[^\]]*)?\](['\"]?)/",
+            static function (array $m) use ($values): string {
+                $val = self::resolveSanitized($values, '__medialist_' . (int) $m[2]);
+                return ($m[1] !== '' && $m[3] !== '') ? var_export($val, true) : $val;
+            },
+            $code
+        );
         // REX_LINK[n], REX_LINK[id=n ...] → gespeicherte Artikel-ID aus __link_n (via addLinkField).
         // Analog zu rex_var_link: Standard-Ausgabe ist die Artikel-ID; bei "output=url"
         // (bzw. jedem output != "id") die aufgelöste URL via rex_getUrl().

@@ -1,5 +1,29 @@
 # Changelog — TW GridBuilder
 
+## [2.12.1] — 2026-07-29
+
+### Fix
+- **Spalten-Gap wieder auf 0–16 begrenzt**: Bei der Erweiterung des Wertebereichs in 2.12.0 wurde der Regler für „Spalten-Gap" versehentlich mit auf 0–64 angehoben. Größere Lückenabstände zwischen Spalten ergeben layouttechnisch keinen Sinn, daher bleibt hier der bisherige Bereich 0–16 (Padding/Margin bleiben bei 0–64). `RESP_ROW()` akzeptiert jetzt ein optionales `max`-Argument (Default 64), die Safelist wurde entsprechend in zwei Zeilen aufgeteilt (`gap` separat mit `{0..16}`).
+
+## [2.12.0] — 2026-07-29
+
+### Feature
+- **Wertebereich für Innen-/Außenabstände und Spalten-Gap von 0–16 auf 0–64 erweitert**: Die Regler für Padding (oben/unten/links-rechts), Margin (oben/unten/links-rechts) und Spalten-Gap bei Zeilen und Zellen erlauben jetzt deutlich größere Abstände. Betroffen sind alle drei Breakpoints (Smartphone/Tablet/Desktop).
+- Die Tailwind-Safelist in `assets/tw-gridbuilder-grid.css` (`@source inline`) wurde entsprechend von `{0..16}` auf `{0..64}` erweitert, damit die zusätzlichen Klassen im Frontend-Build tatsächlich erzeugt werden.
+
+### Kompatibilität
+- Rückwärtskompatibel: bestehende Zeilen/Zellen mit Werten zwischen 0–16 funktionieren unverändert weiter.
+
+## [2.11.2] — 2026-07-28
+
+### Fix
+- **`REX_MEDIALIST` in eingebetteten Modulen wird jetzt korrekt gespeichert und wiederbefuellt**: Bisher wurden Medialist-Felder im GridBuilder-Formular nicht namespaced verarbeitet. Folge: Auswahl im Widget konnte nach dem Speichern leer erscheinen bzw. nicht stabil in den Zellwerten landen. `Api.php` behandelt jetzt `REX_INPUT_MEDIALIST[n]` analog zu Media-/Link-Feldern und mappt auf den Zell-Namespace (`__medialist_n`).
+- **`REX_MEDIALIST[...]` wird beim Modul-Rendern serverseitig aufgeloest**: `Helper::injectValues()` ersetzt nun auch Medialist-Tokens aus den gespeicherten `__medialist_n`-Werten, analog zu `REX_MEDIA` und `REX_LINK`.
+- **Token-Bereinigung im Formular-Ladevorgang erweitert**: Unersetzte `REX_MEDIALIST[n]`-Platzhalter in Value-Attributen werden beim Laden bereinigt und danach per Prefill mit den echten Werten versorgt.
+
+### Kompatibilitaet
+- Rueckwaertskompatibel: bestehende Inhalte bleiben unveraendert, Medialist-Felder funktionieren ab sofort auch in vorhandenen GridBuilder-Modulen ohne weitere Datenmigration.
+
 ## [2.11.1] — 2026-07-23
 
 ### UI
