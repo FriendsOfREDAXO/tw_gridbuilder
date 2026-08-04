@@ -15,7 +15,7 @@
    Steht bewusst HIER (nicht in der Projekt-app.css), damit die Safelist mit
    dem Addon mitreist. Wirkt nur, wenn die Datei per @import in einen
    Tailwind-v4-Build eingebunden ist (Standalone-Nutzung ignoriert @source). */
-@source inline("grid grid-cols-12 mx-auto w-full");
+@source inline("grid grid-cols-12 mx-auto w-full px-page-gutter");
 @source inline("col-span-{1..12}");
 @source inline("{,md:,lg:}{pt,pb,px,mt,mb,mx}-{0..64}");
 @source inline("{,md:,lg:}gap-{0..16}");

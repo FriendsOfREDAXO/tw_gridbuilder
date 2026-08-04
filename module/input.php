@@ -1,7 +1,7 @@
 <?php
 /**
  * TW GridBuilder — Modul-Input
- * @version 2.2.0
+ * @version 2.9.0
  */
 /* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */
 

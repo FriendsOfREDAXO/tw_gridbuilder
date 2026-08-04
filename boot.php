@@ -11,6 +11,11 @@
 
 /** @var rex_addon $this */
 
+// ── Optionale Fluid-Tailwind-Ausgabe ─────────────────────────────────────────
+// true  = Seitengutter als px-page-gutter ausgeben (fluid-tailwindcss nötig)
+// false = bisheriges festes Tailwind-Gutter px-4 ausgeben
+$this->setProperty('fluid_tailwind', true);
+
 // ── AJAX API registrieren ────────────────────────────────────────────────────
 rex_api_function::register('twgb_load_module', \FriendsOfRedaxo\TwGridBuilder\Api::class);
 

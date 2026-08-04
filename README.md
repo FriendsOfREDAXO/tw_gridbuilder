@@ -44,6 +44,7 @@ TW GridBuilder selbst hat keine harte Abhängigkeit zu MForm oder Focuspoint —
 | [MForm](https://github.com/FriendsOfREDAXO/mform) | Wird von den *Inhaltsmodulen*, die in den Zellen platziert werden, für deren eigene Formularfelder genutzt — nicht von tw_gridbuilder selbst | Kein Einfluss auf tw_gridbuilder; nur relevant, falls einzelne Inhaltsmodule MForm voraussetzen |
 | [Focuspoint](https://github.com/FriendsOfREDAXO/focuspoint) | Bildausschnitt für Hintergrundbilder (Zeilen & Zellen) | Fallback auf `background-position: 50% 50%` (Bild-Center), keine Fehler |
 | [animate.css](https://animate.style) + [alpinejs-intersect-class](https://github.com/markmead/alpinejs-intersect-class) | **Voraussetzung für die Animationen** (Zeilen & Zellen). Wird nur benötigt, wenn im Panel eine Animation ausgewählt ist | Ohne animate.css/Plugin passiert nichts — es wird lediglich das Attribut `x-intersect-class.once="animate__animated …"` ausgegeben, das ohne die Bibliothek wirkungslos bleibt (keine Fehler, keine Darstellungsänderung) |
+| [fluid-tailwindcss](https://www.npmjs.com/package/fluid-tailwindcss) | Optionales, fließendes Seitengutter für Standard- und Full-Width-Inhalte | Standardmäßig deaktiviert; ohne Plugin bleibt die bisherige Ausgabe mit `px-4` unverändert |
 
 ### Frontend
 
@@ -355,6 +356,41 @@ Die CSS-Datei per `@import` in die Tailwind-Einstiegsdatei des Projekts einbinde
 Tailwind wertet die im Addon-CSS enthaltene `@source inline(...)`-Safelist mit aus und generiert die Utilities als echte `@layer utilities`. Die Hintergrundfarben (`bg-primary-500`, `bg-secondary-500`, `bg-neutral-*`) beziehen ihre Werte aus den `--color-*`-Theme-Variablen — eine andere Farbpalette im Theme wirkt automatisch, ohne Änderung am Addon.
 
 Sollen weitere Farb- oder Spacing-Stufen im Backend wählbar sein, müssen deren Klassennamen sowohl in die `@source inline(...)`-Safelist (in `tw-gridbuilder-grid.css`) als auch in die entsprechenden Optionslisten in `assets/tw-gridbuilder.js` aufgenommen werden.
+
+### Optional: fließendes Seitengutter mit `fluid-tailwindcss`
+
+Ab Add-on-Version 2.13.1 kann der Modul-Output statt des festen `px-4` die Utility `px-page-gutter` verwenden. Die Integration lässt sich direkt in der `boot.php` aktivieren oder deaktivieren.
+
+1. Plugin im Theme installieren:
+
+```bash
+npm install fluid-tailwindcss
+```
+
+2. Fluid-Token in der Tailwind-Einstiegsdatei definieren:
+
+```css
+@import 'tailwindcss';
+@import '/path/to/redaxo/src/addons/tw_gridbuilder/assets/tw-gridbuilder-grid.css';
+
+@plugin "fluid-tailwindcss" {
+  --spacing-page-gutter: 1.25rem/2rem;
+}
+```
+
+3. Integration direkt in der Datei `boot.php` des Add-ons ein- oder ausschalten. Es gibt dafür bewusst keine Einstellungsseite:
+
+```php
+$this->setProperty('fluid_tailwind', true);
+```
+
+Zum Deaktivieren:
+
+```php
+$this->setProperty('fluid_tailwind', false);
+```
+
+Der Schalter steht gut sichtbar am Anfang von `redaxo/src/addons/tw_gridbuilder/boot.php`. Er ist eine reine Laufzeiteinstellung und verursacht keine Datenbankzugriffe. Solange die Option deaktiviert ist, wird weiterhin exakt die bisherige Klasse `px-4` ausgegeben. Wird die Option aktiviert, ohne `fluid-tailwindcss` und das Token `--spacing-page-gutter` einzubinden, fehlt das horizontale Seitengutter im Frontend.
 
 ### Automatisches Kopieren in ein Build-Verzeichnis
 

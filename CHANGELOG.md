@@ -1,5 +1,18 @@
 # Changelog — TW GridBuilder
 
+## [2.13.1] — 2026-07-30
+
+### Feature
+- **Fluid-Tailwind-Seitengutter optional unterstützt**: Der Modul-Output kann für Standard- und Full-Width-Inhalte statt des bisherigen festen `px-4` die Klasse `px-page-gutter` ausgeben. Aktivierung und Deaktivierung erfolgen über den gut sichtbaren Laufzeitschalter `$this->setProperty('fluid_tailwind', true|false)` am Anfang der `boot.php`.
+- **Ohne Datenbankkonfiguration**: Der Schalter ist eine reine Add-on-Laufzeiteinstellung. Mit `false` bleibt die bisherige Ausgabe mit `px-4` exakt erhalten.
+- Die Add-on-Safelist enthält `px-page-gutter`, damit die optionale Utility bei vorhandener Fluid-Tailwind-Konfiguration vom Tailwind-v4-Build erzeugt werden kann.
+
+### Dokumentation
+- README um Installation, CSS-Token und den Schalter in der `boot.php` ergänzt. Bei aktivierter Option muss im Theme `--spacing-page-gutter` über das Plugin definiert werden.
+
+### Modul
+- `module/input.php` und `module/output.php` auf **2.9.0** vereinheitlicht. Nach dem Add-on-Update müssen beide Vorlagen in die REDAXO-Moduldefinition übernommen werden.
+
 ## [2.12.1] — 2026-07-29
 
 ### Fix

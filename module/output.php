@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.8.0
+ * @version 2.9.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -238,6 +238,8 @@ function pb_bg_image_style(string $filename): string {
 }
 endif;
 
+$pb_fluid_tailwind = (bool) rex_addon::get('tw_gridbuilder')->getProperty('fluid_tailwind', false);
+
 foreach ($pb_data['rows'] as $row) {
     // Zwei unabhängige Layout-Achsen:
     //  - container='full'      → Hintergrund/Section randlos über die volle Browserbreite
@@ -246,7 +248,11 @@ foreach ($pb_data['rows'] as $row) {
     // bleibt der Inhalt im zentrierten Container (die UI deaktiviert das Feld dann).
     $container_full = ($row['container'] ?? 'standard') === 'full';
     $content_full   = ($row['content_width'] ?? 'standard') === 'full';
-    $inner_width    = ($container_full && $content_full) ? 'w-full px-4' : 'container mx-auto px-4';
+    if ($container_full && $content_full) {
+        $inner_width = $pb_fluid_tailwind ? 'w-full px-page-gutter' : 'w-full px-4';
+    } else {
+        $inner_width = $pb_fluid_tailwind ? 'container mx-auto px-page-gutter' : 'container mx-auto px-4';
+    }
     $py_top_base   = (string)($row['py_top']        ?? '3');
     $py_top_md     = (string)($row['py_top_md']    ?? $py_top_base);
     $py_top_lg     = (string)($row['py_top_lg']    ?? $py_top_md);
@@ -270,7 +276,6 @@ foreach ($pb_data['rows'] as $row) {
     // Hintergrund auf Section (volle Breite) oder auf Container (begrenzte Breite)?
     // Entscheidung allein anhand des Container-Dropdowns.
     $bg_on_section = $container_full;
-
     $section_classes = implode(' ', array_filter([
         'pb-section',
         $bg_on_section ? $bg : '',
@@ -282,7 +287,6 @@ foreach ($pb_data['rows'] as $row) {
         ($m_x_base   !== '0' || $m_x_md   !== '0' || $m_x_lg   !== '0') ? pb_resp_class($m_x_base, $m_x_md, $m_x_lg, 'mx-') : '',
         $bg_on_section && $bg_video ? 'relative z-10' : '',
     ]));
-
     $row_radius       = pb_radius_classes($row);
     $row_shadow_hover = !empty($row['shadow_hover']);
     $row_custom_class = pb_custom_class($row);
@@ -434,5 +438,3 @@ foreach ($pb_data['rows'] as $row) {
 
     echo '</div></' . $row_tag . '></section>';
 }
-
-
