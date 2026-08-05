@@ -1,5 +1,14 @@
 # Changelog — TW GridBuilder
 
+## [2.13.2] — 2026-08-05
+
+### Fix
+- **Versionierung des Standard-Moduls bereinigt**: Die Modulversion fuer `0100 - Standard (TW GridBuilder)` wird jetzt zentral aus `module/config.inc` gelesen und ist dort explizit auf `2.9.0` gesetzt.
+- **Modulvorlagen konsistent gekennzeichnet**: `module/input.php` und `module/output.php` tragen wieder den Versionskommentar `@version 2.9.0`.
+
+### Integration
+- Die Base-Installer-Integration kann die Modul-Konfiguration optional direkt aus dem Quell-Addon laden (`source_config`). Damit bleibt die Versionsanzeige des Moduls an der zentralen Quelle im `tw_gridbuilder`-Addon.
+
 ## [2.13.1] — 2026-07-30
 
 ### Feature
