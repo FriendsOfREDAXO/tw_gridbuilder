@@ -1,4 +1,13 @@
 <?php
+/* base-module-config
+modulname = "0100 - Standard (TW GridBuilder)"
+modulkey = "tw_gridbuilder"
+version = "2.9.0"
+requirements = "tw_gridbuilder"
+status = "1"
+framework = "1"
+base-module-config
+*/
 /**
  * TW GridBuilder — Modul-Input
  * @version 2.9.0

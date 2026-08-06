@@ -1,5 +1,15 @@
 # Changelog — TW GridBuilder
 
+## [2.13.3] — 2026-08-06
+
+### Integration
+- `module/input.php` enthält jetzt einen `base-module-config`-Header. Damit können Installer (z. B. Base-Addon) die Modulmetadaten direkt aus dem Quell-Addon lesen.
+- Der Selbst-Marker `/* tw_gridblock selbst ... */` ist als feste Referenz dokumentiert und wird zur sicheren Selbsterkennung des GridBuilder-Moduls verwendet.
+
+### Kompatibilität
+- Keine Änderung am Datenformat gespeicherter Grid-Inhalte.
+- Bestehende Modul-Instanzen bleiben unverändert; nach Addon-Update kann der Modulcode bei Bedarf erneut in die REDAXO-Moduldefinition übernommen werden.
+
 ## [2.13.2] — 2026-08-05
 
 ### Fix
