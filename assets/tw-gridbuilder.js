@@ -22,6 +22,94 @@
   }
 
   const FORM_CONTAINER_ID = (mountId) => 'pb-form-raw-' + mountId;
+  let customLinkRepeaterSyncBound = false;
+
+  function syncMFormRepeaters(container) {
+    if (!container) return;
+
+    container.querySelectorAll('.mfr-container').forEach((repeater) => {
+      const instance = repeater._mfrInstance;
+      if (instance && typeof instance.syncFromDOM === 'function') {
+        instance.syncFromDOM();
+      }
+
+      // Fallback für Widget-Werte, die MForm nicht in sein JSON übernommen hat.
+      // Vorhandene unbekannte Keys bleiben erhalten, damit das Verfahren auch
+      // mit älteren und zukünftigen Repeater-Feldtypen kompatibel bleibt.
+      const valueInput = repeater.querySelector(':scope > .mfr-value');
+      const itemsList = repeater.querySelector(':scope > .mfr-items-list');
+      if (!valueInput || !itemsList) return;
+
+      let previousRows = [];
+      try {
+        const parsed = JSON.parse(valueInput.value || '[]');
+        if (Array.isArray(parsed)) previousRows = parsed;
+      } catch (e) { /* leerer/alter Wert */ }
+
+      const rows = Array.from(itemsList.children)
+        .filter((item) => item.classList.contains('mfr-item'))
+        .map((item, index) => {
+          const previous = previousRows[index];
+          const row = previous && typeof previous === 'object' && !Array.isArray(previous)
+            ? { ...previous }
+            : {};
+          const checkboxValues = {};
+
+          item.querySelectorAll('[data-mfr-field], .rex-js-widget-customlink input[type="hidden"]').forEach((field) => {
+            if (field.closest('.mfr-item') !== item) return;
+
+            let key = field.dataset ? field.dataset.mfrField : '';
+            if (!key) {
+              const nameMatch = String(field.name || '').match(/^mfr_custom_link\[([^\]]+)\]$/);
+              key = nameMatch ? nameMatch[1] : '';
+            }
+            if (!key) return;
+
+            if (field.type === 'checkbox') {
+              if (!checkboxValues[key]) checkboxValues[key] = [];
+              if (field.checked) checkboxValues[key].push(String(field.value || '1'));
+              return;
+            }
+            if (field.type === 'radio') {
+              if (field.checked) row[key] = field.value;
+              return;
+            }
+            if (field.tagName === 'SELECT' && field.multiple) {
+              row[key] = Array.from(field.selectedOptions).map((option) => option.value);
+              return;
+            }
+
+            row[key] = field.value == null ? '' : String(field.value);
+          });
+
+          Object.entries(checkboxValues).forEach(([key, values]) => {
+            row[key] = values.join(',');
+          });
+
+          if (item.dataset.mfrDisabled === '1') row.__disabled = 1;
+          else delete row.__disabled;
+
+          return row;
+        });
+
+      valueInput.value = JSON.stringify(rows);
+    });
+  }
+
+  function bindCustomLinkRepeaterSync() {
+    if (customLinkRepeaterSyncBound || !window.jQuery) return;
+
+    jQuery(window).on('rex:selectCustomLink.twGridBuilder', (event, linkUrl, linkText, input) => {
+      const field = input && input.jquery ? input[0] : input;
+      if (!field || typeof field.closest !== 'function') return;
+      const formContainer = field.closest('[id^="pb-form-raw-"]');
+      if (!formContainer) return;
+
+      syncMFormRepeaters(formContainer);
+    });
+
+    customLinkRepeaterSyncBound = true;
+  }
 
   function setFormHtml(mountId, html, prefillCallback) {
     const el = document.getElementById(FORM_CONTAINER_ID(mountId));
@@ -111,6 +199,7 @@
       // MForm: tabs, toggle, customlink (rexlink/linkmap), conditionals etc.
       // Das rex:ready Event initialisiert alle MForm-Elemente im Container.
       jQuery(document).trigger('rex:ready', [$container]);
+      bindCustomLinkRepeaterSync();
       // Tooltip
       $container.find('[data-toggle="tooltip"]').tooltip();
     }
@@ -836,6 +925,13 @@
       const container = document.getElementById(FORM_CONTAINER_ID(mountId));
       if (!container) return;
       syncEditorsToTextareas(container);
+
+      // MForm-Repeater verwalten ihre Felder in einem eigenen JSON-Hidden-Input.
+      // Widgets wie Custom-Link und Media aktualisieren zuerst ihr internes Feld;
+      // deshalb den Repeater vor dem Auslesen des Modulformulars synchronisieren.
+      // Die Feature-Erkennung hält den GridBuilder mit älteren MForm-Versionen
+      // sowie mit Modulen ohne Repeater vollständig kompatibel.
+      syncMFormRepeaters(container);
 
       const ns = panel.cell.id + '_' + slot.id;
       const prefix = `REX_INPUT_VALUE[twgb][${ns}]`;

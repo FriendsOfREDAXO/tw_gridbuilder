@@ -1,5 +1,17 @@
 # Changelog — TW GridBuilder
 
+## [2.13.5] — 2026-08-11
+
+### Fix
+- **MForm-Repeater vor der GridBuilder-Serialisierung synchronisiert**: Vor dem Wechseln oder Schließen eines Panels sowie vor dem Speichern werden vorhandene MForm-Repeater in eingebetteten Modulen aktualisiert, bevor der GridBuilder deren namespaced Modulwerte übernimmt.
+- **Link- und Media-Werte in Repeatern zuverlässig übernommen**: Der GridBuilder reagiert innerhalb seiner Modulformulare auf `rex:selectCustomLink` und synchronisiert die betroffene Repeater-Struktur unmittelbar nach einer Link- oder Medienauswahl.
+- **Abgesicherte Repeater-Serialisierung ergänzt**: Falls eine MForm-Version Widget-Änderungen nicht selbst in das Repeater-JSON schreibt, liest der GridBuilder die mit `data-mfr-field` markierten Felder sowie Custom-Link-Hidden-Inputs direkt aus. Bereits vorhandene unbekannte Felder bleiben dabei erhalten.
+- **Aktualisierte Backend-Assets werden sicher geladen**: Die Asset-URL enthält zusätzlich zur Addon-Version den Änderungszeitpunkt der jeweiligen Datei. Dadurch bleiben korrigierte JavaScript-Dateien nicht unter einer bereits gecachten Versions-URL hängen.
+
+### Kompatibilität
+- Rückwärtskompatibel: Das gespeicherte GridBuilder- und Repeater-Datenformat bleibt unverändert; es ist keine Datenmigration erforderlich.
+- Module ohne MForm-Repeater bleiben unverändert. Bei älteren MForm-Versionen greift die feature-basierte Fallback-Serialisierung.
+
 ## [2.13.3] — 2026-08-06
 
 ### Integration

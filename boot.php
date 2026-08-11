@@ -51,5 +51,7 @@ if (isset($_POST['REX_INPUT_VALUE']['twgb']['__layout__'])) {
 
 // ── Assets einbinden ─────────────────────────────────────────────────────────
 $addon = rex_addon::get('tw_gridbuilder');
-rex_view::addCssFile($addon->getAssetsUrl('tw-gridbuilder.css?v=' . $addon->getVersion()));
-rex_view::addJsFile($addon->getAssetsUrl('tw-gridbuilder.js?v='   . $addon->getVersion()));
+$cssVersion = $addon->getVersion() . '.' . (string) filemtime($addon->getPath('assets/tw-gridbuilder.css'));
+$jsVersion = $addon->getVersion() . '.' . (string) filemtime($addon->getPath('assets/tw-gridbuilder.js'));
+rex_view::addCssFile($addon->getAssetsUrl('tw-gridbuilder.css?v=' . $cssVersion));
+rex_view::addJsFile($addon->getAssetsUrl('tw-gridbuilder.js?v=' . $jsVersion));
