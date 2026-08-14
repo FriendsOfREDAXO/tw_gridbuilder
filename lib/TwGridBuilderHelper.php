@@ -25,7 +25,7 @@ class Helper
      * werden roh eingesetzt (siehe injectValues) und im HTML-Kontext ausgegeben, nicht
      * als PHP interpretiert — sofern der Wert selbst kein `<?php`-Konstrukt enthält.
      */
-    public static function renderModule(int $moduleId, array $values): string
+    public static function renderModule(int $moduleId, array $values, array $context = []): string
     {
         $sql = \rex_sql::factory();
         $sql->setQuery(
@@ -35,6 +35,9 @@ class Helper
         if ($sql->getRows() === 0) return '';
 
         $code = self::injectValues($sql->getValue('output'), $values);
+        // Dokumentierter Kontext für eingebettete Module. Die Variable liegt im
+        // Scope des eval() und ist damit direkt als $twgbContext verfügbar.
+        $twgbContext = self::createContext($context, $moduleId);
         ob_start();
         try {
             eval('?>' . $code);
@@ -43,6 +46,41 @@ class Helper
             return '<p style="color:#ef4444;font-size:11px;">⚠ ' . htmlspecialchars($e->getMessage()) . '</p>';
         }
         return ob_get_clean();
+    }
+
+    /**
+     * Baut den stabilen Laufzeitkontext eines eingebetteten Moduls.
+     *
+     * Ein GridBuilder-Modulslot ist kein eigener rex_article_slice. Deshalb ist
+     * parent_slice_id die ID des umgebenden GridBuilder-Slices (oder null, wenn
+     * dieser beim Anlegen bzw. in einer losgelösten Vorschau noch nicht existiert).
+     * row_id, cell_id und slot_id stammen aus dem gespeicherten GridBuilder-JSON.
+     *
+     * @return array{
+     *     parent_slice_id: int|null,
+     *     article_id: int,
+     *     clang_id: int,
+     *     ctype_id: int,
+     *     row_id: string,
+     *     cell_id: string,
+     *     slot_id: string,
+     *     module_id: int
+     * }
+     */
+    public static function createContext(array $context, int $moduleId): array
+    {
+        $parentSliceId = (int) ($context['parent_slice_id'] ?? 0);
+
+        return [
+            'parent_slice_id' => $parentSliceId > 0 ? $parentSliceId : null,
+            'article_id' => max(0, (int) ($context['article_id'] ?? 0)),
+            'clang_id' => max(0, (int) ($context['clang_id'] ?? 0)),
+            'ctype_id' => max(0, (int) ($context['ctype_id'] ?? 0)),
+            'row_id' => (string) ($context['row_id'] ?? ''),
+            'cell_id' => (string) ($context['cell_id'] ?? ''),
+            'slot_id' => (string) ($context['slot_id'] ?? ''),
+            'module_id' => $moduleId,
+        ];
     }
 
     /**

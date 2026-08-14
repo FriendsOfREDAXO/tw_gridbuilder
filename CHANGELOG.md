@@ -1,5 +1,21 @@
 # Changelog — TW GridBuilder
 
+## [2.14.0] — 2026-08-14
+
+### Feature
+- **Dokumentierter `$twgbContext` für eingebettete Modulausgaben**: Frontend, Backend-Ausgabe, initiale Eingabe-Vorschau und AJAX-Vorschau stellen jetzt ein einheitliches Kontext-Array mit `parent_slice_id`, `article_id`, `clang_id`, `ctype_id`, `row_id`, `cell_id`, `slot_id` und `module_id` bereit.
+- **Stabile Instanz-IDs ohne simulierte Slices**: `row_id`, `cell_id` und `slot_id` kommen direkt aus dem gespeicherten GridBuilder-JSON. `parent_slice_id` bezeichnet den echten umgebenden GridBuilder-Slice und ist bei einem noch nicht gespeicherten Slice `null`.
+
+### Dokumentation
+- README um Semantik, Verfügbarkeit, Typen, Beispielcode und den Hinweis ergänzt, dass eingebettete Module keine eigene `REX_SLICE_ID` und keinen verlässlichen `$this`-Kontext besitzen.
+- Beim Update von einer Version vor 2.14.0 erscheint einmalig der Hinweis, die bestehende GridBuilder-Moduldefinition auf Modulversion 2.10.0 zu aktualisieren.
+
+### Kompatibilität
+- **Vollständig abwärtskompatibles Datenformat:** `REX_VALUE[1]`, das GridBuilder-JSON und sämtliche vorhandenen `rex_article_slice`-Datensätze bleiben unverändert; das Update führt keine Inhaltsmigration und keine automatischen Schreibzugriffe auf bestehende Slices aus.
+- GridBuilder-kompatible Module können mit `$twgbContext ?? []` weiterhin auch außerhalb des GridBuilders ausgeführt werden.
+- Die Vorlagen für Input und Output des Standard-Moduls sowie die Base-Modulmetadaten wurden auf **2.10.0** angehoben. Für `$twgbContext` müssen Input und Output der bestehenden Moduldefinition ersetzt werden. Das vorhandene Modul darf dabei nicht gelöscht oder neu angelegt werden; dadurch bleiben Modul-ID, Slice-Zuordnungen und Inhalte erhalten.
+- Ohne Austausch der Moduldefinition bleiben bestehende Seiten funktionsfähig; lediglich der neue `$twgbContext` ist dort noch nicht verfügbar.
+
 ## [2.13.5] — 2026-08-11
 
 ### Fix

@@ -7,8 +7,8 @@
   window.PB = window.PB || {};
 
   window.PB.init = function (config) {
-    const { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField } = config;
-    loadVue().then((Vue) => startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField }));
+    const { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField, renderContext } = config;
+    loadVue().then((Vue) => startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField, renderContext }));
   };
 
   function loadVue() {
@@ -205,7 +205,7 @@
     }
   }
 
-  function startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField }) {
+  function startApp(Vue, { mountId, outputId, modules, initialData, ajaxUrl, csrfToken, csrfField, renderContext }) {
     const { createApp, reactive, nextTick, computed, onMounted } = Vue;
 
     // POST-Helfer: Daten im Body statt in der URL (verhindert URL-Längenlimit bei
@@ -801,7 +801,13 @@
 
     function refreshCellPreview(cell) {
       if (!cell.modules.length) { cell.preview = ''; return; }
-      apiPost({ twgb_preview: '1', cell_data: JSON.stringify(cell) })
+      const row = rows.find((candidate) => candidate.cells.some((item) => item.id === cell.id));
+      const context = { ...(renderContext || {}), row_id: row ? row.id : '', cell_id: cell.id };
+      apiPost({
+        twgb_preview: '1',
+        cell_data: JSON.stringify(cell),
+        twgb_context: JSON.stringify(context),
+      })
         .then(data => { if (data.preview !== undefined) cell.preview = data.preview; })
         .catch(() => {});
     }

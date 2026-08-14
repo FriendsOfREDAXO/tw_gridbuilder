@@ -18,6 +18,32 @@ Verbindliche Regeln für jede Weiterentwicklung:
 
 ---
 
+## Updatehinweis für 2.14.0
+
+Die gespeicherten Inhalte sind vollständig abwärtskompatibel: Das JSON-Format
+in `REX_VALUE[1]` wurde nicht geändert und es findet keine Datenmigration statt.
+Bestehende Seiten rendern nach dem reinen AddOn-Update weiterhin mit ihrer
+bisherigen GridBuilder-Moduldefinition.
+
+Damit eingebettete Module den neuen `$twgbContext` erhalten, müssen anschließend
+jedoch **Input und Output der bestehenden GridBuilder-Moduldefinition auf
+Modulversion 2.10.0 aktualisiert** werden:
+
+1. Vorhandenes Modul **„0100 – Standard (TW GridBuilder)“** im REDAXO-Backend öffnen.
+2. Den Input durch `module/input.php` und den Output durch `module/output.php` aus diesem AddOn ersetzen.
+3. Das vorhandene Modul speichern – **nicht löschen, nicht neu anlegen und weder Modul-ID noch Modul-Key ändern**.
+
+Der Austausch ändert ausschließlich den Code der Moduldefinition. Die vorhandene
+Modul-ID, alle `rex_article_slice`-Datensätze und das darin gespeicherte
+GridBuilder-JSON bleiben erhalten. Es gehen daher keine bestehenden Inhalte
+verloren. Projektspezifische Änderungen an der bisherigen Moduldefinition sollten
+vor dem Ersetzen geprüft und bei Bedarf in die neue Vorlage übernommen werden.
+
+Ohne Austausch bleibt die Website funktionsfähig; lediglich `$twgbContext` steht
+in eingebetteten Modulen noch nicht zur Verfügung.
+
+---
+
 **Setzt einen Tailwind-v4-Build voraus**
 
 TW GridBuilder generiert Tailwind-Utility-Klassen (Grid, Spacing, Container, Hintergrundfarben). Ab Version 2.2.0 werden diese Klassen **vom Tailwind-Build des Projekts erzeugt** (Farben stammen aus den Theme-Variablen, Responsive-Varianten funktionieren korrekt), nicht mehr als vorkompilierte, unlayered Utilities mitgeliefert. `tw-gridbuilder-grid.css` enthält dazu eine Tailwind-`@source inline(...)`-Safelist plus die wenigen echten Custom-Klassen (Video-Hintergrund, Mobile-Reihenfolge). Voraussetzung ist daher, dass die Datei per `@import` in einen **Tailwind-v4-Build** eingebunden ist — siehe „Grid-CSS in den Build-Prozess einbinden".
@@ -161,6 +187,49 @@ Das gesamte Layout wird als JSON in `REX_VALUE[1]` des Slices gespeichert:
 Formularfelder innerhalb einer Zelle werden umbenannt um Konflikte zu vermeiden:
 - `REX_INPUT_VALUE[n]` → `REX_INPUT_VALUE[twgb][{cell_id}][n]`
 - `REX_INPUT_MEDIA[n]` → `REX_INPUT_VALUE[twgb][{cell_id}][__media_n]`
+
+### Laufzeitkontext eingebetteter Module: `$twgbContext`
+
+Ein im GridBuilder platziertes Modul ist kein eigener `rex_article_slice`. Sein
+Output erhält deshalb weder eine eigene `REX_SLICE_ID` noch einen verlässlich
+verfügbaren REDAXO-Renderer über `$this`. Stattdessen stellt der GridBuilder in
+der Ausgabe jedes eingebetteten Moduls das dokumentierte Array
+`$twgbContext` bereit. Es ist im Frontend, in der Backend-Ausgabe sowie in den
+serverseitigen und per AJAX geladenen Vorschauen verfügbar.
+
+| Schlüssel | Typ | Bedeutung |
+|---|---:|---|
+| `parent_slice_id` | `int|null` | ID des echten GridBuilder-Slices; beim Anlegen eines noch nicht gespeicherten Slices `null` |
+| `article_id` | `int` | Aktuelle REDAXO-Artikel-ID |
+| `clang_id` | `int` | Aktuelle Sprach-ID |
+| `ctype_id` | `int` | Aktuelle Ctype-ID |
+| `row_id` | `string` | Stabile ID der Zeile aus dem GridBuilder-JSON |
+| `cell_id` | `string` | Stabile ID der Zelle aus dem GridBuilder-JSON |
+| `slot_id` | `string` | Stabile ID des konkreten Modulslots aus dem GridBuilder-JSON |
+| `module_id` | `int` | ID der verwendeten REDAXO-Moduldefinition |
+
+Beispiel in der Ausgabe eines GridBuilder-kompatiblen Inhaltsmoduls:
+
+```php
+<?php
+$context = $twgbContext ?? [];
+$slotId = (string) ($context['slot_id'] ?? 'standalone');
+$parentSliceId = $context['parent_slice_id'] ?? null;
+
+// Innerhalb eines Artikels eindeutiger und über erneutes Rendern stabiler DOM-Hook.
+$domId = 'teaser-' . ($parentSliceId ?? 'new') . '-' . $slotId;
+?>
+<section id="<?= rex_escape($domId) ?>">
+    <!-- Modulausgabe -->
+</section>
+```
+
+`parent_slice_id` bezeichnet ausdrücklich den umgebenden GridBuilder-Slice,
+nicht einen Slice des eingebetteten Moduls. Für eine eindeutige Instanz sollte
+`slot_id` verwendet und bei seitenweiten DOM-IDs mit `parent_slice_id`
+kombiniert werden. Die Kontextwerte sind Laufzeitinformationen und dürfen nicht
+als Ersatz für Berechtigungsprüfungen verwendet werden. Mit dem Fallback
+`$twgbContext ?? []` bleibt ein Modul auch außerhalb des GridBuilders nutzbar.
 
 ### Responsive Abstände
 

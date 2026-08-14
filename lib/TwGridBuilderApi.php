@@ -31,10 +31,17 @@ class Api extends \rex_api_function
         // Preview-Modus: rendert alle Module einer Zelle als HTML
         if (\rex_request('twgb_preview', 'int', 0)) {
             $cell    = json_decode(\rex_request('cell_data', 'string', '{}'), true) ?: [];
+            $context = json_decode(\rex_request('twgb_context', 'string', '{}'), true) ?: [];
             $preview = '';
             foreach ($cell['modules'] ?? [] as $slot) {
                 $mid = (int)($slot['module_id'] ?? 0);
-                if ($mid) $preview .= Helper::renderModule($mid, $slot['values'] ?? []);
+                if ($mid) {
+                    $slotContext = array_merge($context, [
+                        'cell_id' => (string) ($cell['id'] ?? ''),
+                        'slot_id' => (string) ($slot['id'] ?? ''),
+                    ]);
+                    $preview .= Helper::renderModule($mid, $slot['values'] ?? [], $slotContext);
+                }
             }
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode(['preview' => $preview], JSON_UNESCAPED_UNICODE);

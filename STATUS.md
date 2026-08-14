@@ -3,7 +3,7 @@
 ## Architektur
 - Vue 3 (CDN), kein Build-Step
 - Addon: `redaxo/src/addons/tw_gridbuilder/`
-- Helper-Klasse: `FriendsOfRedaxo\TwGridBuilder\Helper::renderModule()` / `injectValues()` (lib/TwGridBuilderHelper.php) — ersetzt REX_VALUE[n] via Regex (kein rex_var::parse)
+- Helper-Klasse: `FriendsOfRedaxo\TwGridBuilder\Helper::renderModule()` / `injectValues()` (lib/TwGridBuilderHelper.php) — ersetzt REX_VALUE[n] via Regex (kein rex_var::parse) und stellt eingebetteten Ausgaben den dokumentierten `$twgbContext` bereit
 - AJAX-API: `FriendsOfRedaxo\TwGridBuilder\Api` (lib/TwGridBuilderApi.php), registriert als `twgb_load_module`
 - Datenspeicherung: JSON in `value1` via `REX_INPUT_VALUE[twgb][__layout__]` → boot.php schreibt nach `REX_INPUT_VALUE[1]`
 - Frontend-CSS: kein automatisches Einbinden mehr — optional via `css_output_path`-Config oder manuell in Build-Prozess (siehe README)

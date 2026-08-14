@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.9.0
+ * @version 2.10.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -25,6 +25,15 @@ if (empty($pb_data['rows'])) {
     }
     return;
 }
+
+// Kontext des echten, umgebenden GridBuilder-Slices. Die IDs des virtuellen
+// Moduls (Row/Cell/Slot) werden unmittelbar vor dessen Ausgabe ergänzt.
+$pb_base_context = [
+    'parent_slice_id' => (int) 'REX_SLICE_ID',
+    'article_id'      => (int) 'REX_ARTICLE_ID',
+    'clang_id'        => (int) 'REX_CLANG_ID',
+    'ctype_id'        => (int) 'REX_CTYPE_ID',
+];
 
 // Helfer: Border-Radius-Klassen pro Ecke (Tailwind-v4-Skala)
 // radius_tl/tr/bl/br = Index 0-9 (0 = keine, sonst xs/sm/md/lg/xl/2xl/3xl/4xl/full)
@@ -199,7 +208,12 @@ if (rex::isBackend()) {
                     // Jedes Modul einzeln umschließen → optische Trennung + Namens-Label
                     echo '<div class="twgb-be-module">';
                     echo '<div class="twgb-be-module-label">' . htmlspecialchars($pb_mnames[$pb_mid]) . '</div>';
-                    echo \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule($pb_mid, $pb_vals);
+                    $pb_context = $pb_base_context + [
+                        'row_id'  => (string) ($pb_row['id'] ?? ''),
+                        'cell_id' => (string) ($pb_cell['id'] ?? ''),
+                        'slot_id' => (string) ($pb_slot['id'] ?? ''),
+                    ];
+                    echo \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule($pb_mid, $pb_vals, $pb_context);
                     echo '</div>';
                 }
             }
@@ -421,6 +435,14 @@ foreach ($pb_data['rows'] as $row) {
             if ($mod_sql->getRows() === 0) continue;
 
             $code = \FriendsOfRedaxo\TwGridBuilder\Helper::injectValues($mod_sql->getValue('output'), $values);
+            $twgbContext = \FriendsOfRedaxo\TwGridBuilder\Helper::createContext(
+                $pb_base_context + [
+                    'row_id'  => (string) ($row['id'] ?? ''),
+                    'cell_id' => (string) ($cell['id'] ?? ''),
+                    'slot_id' => (string) ($slot['id'] ?? ''),
+                ],
+                $module_id
+            );
             try {
                 ob_start();
                 eval('?>' . $code);

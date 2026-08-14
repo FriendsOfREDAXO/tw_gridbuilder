@@ -2,7 +2,7 @@
 /* base-module-config
 modulname = "0100 - Standard (TW GridBuilder)"
 modulkey = "tw_gridbuilder"
-version = "2.9.0"
+version = "2.10.0"
 requirements = "tw_gridbuilder"
 status = "1"
 framework = "1"
@@ -10,7 +10,7 @@ base-module-config
 */
 /**
  * TW GridBuilder — Modul-Input
- * @version 2.9.0
+ * @version 2.10.0
  */
 /* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */
 
@@ -47,6 +47,15 @@ if ($pb_raw !== '' && $pb_raw !== $pb_sentinel) {
 }
 if (!isset($pb_data['rows'])) $pb_data = ['rows' => []];
 
+// REDAXO-Kontext des umgebenden GridBuilder-Slices. Eingebettete Module sind
+// keine eigenen Slices; die stabilen Row-/Cell-/Slot-IDs werden unten ergänzt.
+$pb_base_context = [
+    'parent_slice_id' => (int) 'REX_SLICE_ID',
+    'article_id'      => (int) 'REX_ARTICLE_ID',
+    'clang_id'        => (int) 'REX_CLANG_ID',
+    'ctype_id'        => (int) 'REX_CTYPE_ID',
+];
+
 // Previews in $pb_data einbauen.
 // Nutzt dieselbe Token-Ersetzung wie Frontend/AJAX (Helper::renderModule) — eine
 // einzige Quelle für die Modul-Wert-Auflösung (REX_VALUE/MEDIA/LINK inkl. Parameter).
@@ -55,9 +64,15 @@ foreach ($pb_data['rows'] as &$pb_row) {
         $pb_preview = '';
         foreach ($pb_cell['modules'] ?? [] as $pb_slot) {
             if (!empty($pb_slot['module_id'])) {
+                $pb_context = $pb_base_context + [
+                    'row_id'  => (string) ($pb_row['id'] ?? ''),
+                    'cell_id' => (string) ($pb_cell['id'] ?? ''),
+                    'slot_id' => (string) ($pb_slot['id'] ?? ''),
+                ];
                 $pb_preview .= \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule(
                     (int)$pb_slot['module_id'],
-                    $pb_slot['values'] ?? []
+                    $pb_slot['values'] ?? [],
+                    $pb_context
                 );
             }
         }
@@ -92,6 +107,7 @@ $output_id  = 'twgb-layout-' . $pb_uid;
                 ajaxUrl:     <?= json_encode($ajax_url,   JSON_UNESCAPED_UNICODE) ?>,
                 csrfToken:   <?= json_encode($csrf_token) ?>,
                 csrfField:   <?= json_encode(rex_csrf_token::PARAM) ?>,
+                renderContext: <?= json_encode($pb_base_context, JSON_UNESCAPED_UNICODE) ?>,
             });
         }
     }, 50);
