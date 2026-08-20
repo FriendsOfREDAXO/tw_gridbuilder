@@ -260,7 +260,7 @@
         bg: '', bg_image: '', bg_video: '',
         mobile_reverse: false, text_align: '', align_v: '',
         radius_tl: '0', radius_tr: '0', radius_bl: '0', radius_br: '0',
-        shadow_hover: false, custom_class: '',
+        shadow_hover: false, custom_class: '', divider: false,
         anim: '', anim_delay: '', anim_duration: '',
         link: '', link_label: '',
         expanded: false,
@@ -330,7 +330,7 @@
         align_v: r.align_v || '',
         radius_tl: migrateRadius(r, 'tl'), radius_tr: migrateRadius(r, 'tr'),
         radius_bl: migrateRadius(r, 'bl'), radius_br: migrateRadius(r, 'br'),
-        shadow_hover: r.shadow_hover || false, custom_class: r.custom_class || '',
+        shadow_hover: r.shadow_hover || false, custom_class: r.custom_class || '', divider: r.divider || false,
         anim: r.anim || '', anim_delay: r.anim_delay || '', anim_duration: r.anim_duration || '',
         link: r.link || '', link_label: r.link_label || '',
         cells: (r.cells || []).map(migrateCell),
@@ -985,7 +985,7 @@
           bg: r.bg, bg_image: r.bg_image, bg_video: r.bg_video,
           mobile_reverse: r.mobile_reverse, text_align: r.text_align, align_v: r.align_v || '',
           radius_tl: r.radius_tl, radius_tr: r.radius_tr, radius_bl: r.radius_bl, radius_br: r.radius_br,
-          shadow_hover: r.shadow_hover, custom_class: r.custom_class || '',
+          shadow_hover: r.shadow_hover, custom_class: r.custom_class || '', divider: !!r.divider,
           anim: r.anim || '', anim_delay: r.anim_delay || '', anim_duration: r.anim_duration || '',
           link: r.link || '', link_label: r.link_label || '',
           cells: r.cells.map((c) => ({
@@ -1404,7 +1404,7 @@
       </div>
 
       <!-- Row Meta -->
-      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.anim || row.link || hasMargin(row)">
+      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.divider || row.anim || row.link || hasMargin(row)">
         <span v-if="row.container !== 'standard'" class="pb-tag">{{ row.container }}</span>
         <span v-if="row.content_width !== 'standard'" class="pb-tag">Inhalt: {{ row.content_width }}</span>
         <span v-if="row.bg" class="pb-tag">{{ row.bg }}</span>
@@ -1420,6 +1420,7 @@
         <span v-if="row.text_align" class="pb-tag">{{ row.text_align }}</span>
         <span v-if="hasRadius(row)" class="pb-tag"><i class="rex-icon fa fa-circle-notch"></i> Ecken</span>
         <span v-if="row.shadow_hover" class="pb-tag"><i class="rex-icon fa fa-square-o"></i> Hover-Schatten</span>
+        <span v-if="row.divider" class="pb-tag"><i class="rex-icon fa fa-minus"></i> Trennlinie</span>
         <span v-if="row.custom_class" class="pb-tag">.{{ row.custom_class }}</span>
         <span v-if="row.anim" class="pb-tag"><i class="rex-icon fa fa-magic"></i> {{ animLabel(row.anim) }}</span>
         <span v-if="row.link" class="pb-tag"><i class="rex-icon fa fa-link"></i> {{ row.link_label || ('Artikel ' + row.link) }}</span>
@@ -1690,8 +1691,11 @@
           </div>
         `)}
 
-        ${SECTION('style', 'Ecken &amp; Effekte', "hasRadius(panel.row) || panel.row.shadow_hover || !!panel.row.custom_class", `
+        ${SECTION('style', 'Ecken &amp; Effekte', "hasRadius(panel.row) || panel.row.shadow_hover || !!panel.row.custom_class || !!panel.row.divider", `
           ${RADIUS_UI('panel.row')}
+          <div class="pb-panel-section pb-panel-section-row">
+            ${TOGGLE('panel.row.divider', 'Trennlinie zwischen den Spalten')}
+          </div>
           ${ADVANCED('panel.row')}
         `)}
 

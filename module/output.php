@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.10.0
+ * @version 2.15.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -25,15 +25,6 @@ if (empty($pb_data['rows'])) {
     }
     return;
 }
-
-// Kontext des echten, umgebenden GridBuilder-Slices. Die IDs des virtuellen
-// Moduls (Row/Cell/Slot) werden unmittelbar vor dessen Ausgabe ergänzt.
-$pb_base_context = [
-    'parent_slice_id' => (int) 'REX_SLICE_ID',
-    'article_id'      => (int) 'REX_ARTICLE_ID',
-    'clang_id'        => (int) 'REX_CLANG_ID',
-    'ctype_id'        => (int) 'REX_CTYPE_ID',
-];
 
 // Helfer: Border-Radius-Klassen pro Ecke (Tailwind-v4-Skala)
 // radius_tl/tr/bl/br = Index 0-9 (0 = keine, sonst xs/sm/md/lg/xl/2xl/3xl/4xl/full)
@@ -139,6 +130,7 @@ if (rex::isBackend()) {
         if (!empty($pb_row['mobile_reverse']))                                           $pb_tags[] = '<i class="rex-icon fa fa-mobile"></i> Mobil';
         if (pb_radius_classes($pb_row) !== '')                                           $pb_tags[] = '<i class="rex-icon fa fa-circle-notch"></i> Ecken';
         if (!empty($pb_row['shadow_hover']))                                              $pb_tags[] = '<i class="rex-icon fa fa-square-o"></i> Hover-Schatten';
+        if (!empty($pb_row['divider']))                                                   $pb_tags[] = '<i class="rex-icon fa fa-minus"></i> Trennlinie';
         if (pb_custom_class($pb_row) !== '')                                              $pb_tags[] = '.' . htmlspecialchars(pb_custom_class($pb_row), ENT_QUOTES);
         if (pb_anim_label($pb_row) !== '')                                                $pb_tags[] = '<i class="rex-icon fa fa-magic"></i> ' . htmlspecialchars(pb_anim_label($pb_row), ENT_QUOTES);
         if (pb_link_href($pb_row) !== '')                                                 $pb_tags[] = '<i class="rex-icon fa fa-link"></i> ' . htmlspecialchars((string)($pb_row['link_label'] ?? '') ?: ('Artikel ' . (string)($pb_row['link'] ?? '')), ENT_QUOTES);
@@ -208,12 +200,7 @@ if (rex::isBackend()) {
                     // Jedes Modul einzeln umschließen → optische Trennung + Namens-Label
                     echo '<div class="twgb-be-module">';
                     echo '<div class="twgb-be-module-label">' . htmlspecialchars($pb_mnames[$pb_mid]) . '</div>';
-                    $pb_context = $pb_base_context + [
-                        'row_id'  => (string) ($pb_row['id'] ?? ''),
-                        'cell_id' => (string) ($pb_cell['id'] ?? ''),
-                        'slot_id' => (string) ($pb_slot['id'] ?? ''),
-                    ];
-                    echo \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule($pb_mid, $pb_vals, $pb_context);
+                    echo \FriendsOfRedaxo\TwGridBuilder\Helper::renderModule($pb_mid, $pb_vals);
                     echo '</div>';
                 }
             }
@@ -252,8 +239,6 @@ function pb_bg_image_style(string $filename): string {
 }
 endif;
 
-$pb_fluid_tailwind = (bool) rex_addon::get('tw_gridbuilder')->getProperty('fluid_tailwind', false);
-
 foreach ($pb_data['rows'] as $row) {
     // Zwei unabhängige Layout-Achsen:
     //  - container='full'      → Hintergrund/Section randlos über die volle Browserbreite
@@ -262,11 +247,7 @@ foreach ($pb_data['rows'] as $row) {
     // bleibt der Inhalt im zentrierten Container (die UI deaktiviert das Feld dann).
     $container_full = ($row['container'] ?? 'standard') === 'full';
     $content_full   = ($row['content_width'] ?? 'standard') === 'full';
-    if ($container_full && $content_full) {
-        $inner_width = $pb_fluid_tailwind ? 'w-full px-page-gutter' : 'w-full px-4';
-    } else {
-        $inner_width = $pb_fluid_tailwind ? 'container mx-auto px-page-gutter' : 'container mx-auto px-4';
-    }
+    $inner_width    = ($container_full && $content_full) ? 'w-full px-4' : 'container mx-auto px-4';
     $py_top_base   = (string)($row['py_top']        ?? '3');
     $py_top_md     = (string)($row['py_top_md']    ?? $py_top_base);
     $py_top_lg     = (string)($row['py_top_lg']    ?? $py_top_md);
@@ -290,6 +271,7 @@ foreach ($pb_data['rows'] as $row) {
     // Hintergrund auf Section (volle Breite) oder auf Container (begrenzte Breite)?
     // Entscheidung allein anhand des Container-Dropdowns.
     $bg_on_section = $container_full;
+
     $section_classes = implode(' ', array_filter([
         'pb-section',
         $bg_on_section ? $bg : '',
@@ -301,8 +283,12 @@ foreach ($pb_data['rows'] as $row) {
         ($m_x_base   !== '0' || $m_x_md   !== '0' || $m_x_lg   !== '0') ? pb_resp_class($m_x_base, $m_x_md, $m_x_lg, 'mx-') : '',
         $bg_on_section && $bg_video ? 'relative z-10' : '',
     ]));
+
     $row_radius       = pb_radius_classes($row);
     $row_shadow_hover = !empty($row['shadow_hover']);
+    // Trennlinie zwischen Spalten via Tailwind divide-y/divide-x (border-top/-left
+    // auf jedem Kind außer dem ersten); ohne Wirkung bei nur einer Spalte.
+    $row_divider      = !empty($row['divider']);
     $row_custom_class = pb_custom_class($row);
     $row_anim_attr    = pb_anim_attr($row); // Animation auf inneren Container
     $row_link_href    = pb_link_href($row); // ganze Zeile als interner Link
@@ -347,6 +333,7 @@ foreach ($pb_data['rows'] as $row) {
         pb_resp_class($gap_base, $gap_md, $gap_lg, 'gap-'),
         $align_v,
         $mobile_rev ? 'pb-mobile-reverse' : '',
+        $row_divider ? 'divide-y divide-black/50 md:divide-y-0 md:divide-x' : '',
         'twgb-row',
         $row_cols_count ? 'twgb-row--cols-' . $row_cols_count : '',
         $row_cell_spans ? 'twgb-row--span-' . implode('-', $row_cell_spans) : '',
@@ -435,14 +422,6 @@ foreach ($pb_data['rows'] as $row) {
             if ($mod_sql->getRows() === 0) continue;
 
             $code = \FriendsOfRedaxo\TwGridBuilder\Helper::injectValues($mod_sql->getValue('output'), $values);
-            $twgbContext = \FriendsOfRedaxo\TwGridBuilder\Helper::createContext(
-                $pb_base_context + [
-                    'row_id'  => (string) ($row['id'] ?? ''),
-                    'cell_id' => (string) ($cell['id'] ?? ''),
-                    'slot_id' => (string) ($slot['id'] ?? ''),
-                ],
-                $module_id
-            );
             try {
                 ob_start();
                 eval('?>' . $code);
@@ -460,3 +439,5 @@ foreach ($pb_data['rows'] as $row) {
 
     echo '</div></' . $row_tag . '></section>';
 }
+
+

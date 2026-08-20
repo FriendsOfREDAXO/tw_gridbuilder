@@ -1,5 +1,13 @@
 # Changelog — TW GridBuilder
 
+## [2.15.0] — 2026-08-20
+
+### Feature
+- **Trennlinie zwischen Spalten** (Zeilen-Einstellung „Ecken & Effekte" → Schalter „Trennlinie zwischen den Spalten", analog zu „Schatten bei Hover"): schwarz mit 50 % Deckkraft, per Tailwind `divide-y`/`divide-x` umgesetzt. Ab 768px vertikal zwischen den nebeneinanderliegenden Spalten, darunter (gestapelte Spalten) automatisch horizontal. Ohne Wirkung, wenn die Zeile nur eine Spalte hat.
+
+### Kompatibilität
+- **Vollständig abwärtskompatibel:** neues, optionales Feld `divider` auf Zeilenebene (Default `false` = keine Trennlinie). Bestehende gespeicherte GridBuilder-Inhalte ohne dieses Feld werden unverändert wie zuvor gerendert.
+
 ## [2.14.0] — 2026-08-14
 
 ### Feature

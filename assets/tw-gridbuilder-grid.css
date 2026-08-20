@@ -26,6 +26,12 @@
 @source inline("rounded-{tl,tr,bl,br}-{xs,sm,md,lg,xl,2xl,3xl,4xl,full}");
 /* Schatten bei Hover (Zeilen & Zellen) */
 @source inline("hover:shadow-xl transition-shadow duration-300");
+/* Trennlinie zwischen Spalten (Zeile): Tailwinds divide-y/divide-x setzen
+   border-top bzw. border-left auf jedes Kind außer dem ersten (CSS:
+   > :not([hidden]) ~ :not([hidden])). divide-y unterhalb md (gestapelte
+   Spalten), md:divide-y-0 md:divide-x ab 768px (Spalten nebeneinander).
+   Bei nur einer Spalte ohne Effekt, da divide-* ein zweites Kind braucht. */
+@source inline("divide-y divide-black/50 md:divide-y-0 md:divide-x");
 
 /* ── pb-section Basis ── */
 .pb-section { display: block; }
