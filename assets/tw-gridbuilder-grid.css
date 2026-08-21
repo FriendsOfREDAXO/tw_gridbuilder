@@ -66,13 +66,61 @@
 }
 
 /* ── Mobile: alle Spalten auf volle Breite ──
-   Überschreibt die (von Tailwind erzeugten) .col-span-* unter 768px. */
+   Überschreibt die (von Tailwind erzeugten) .col-span-* unter 768px.
+   Wichtig: die Zeile selbst wird ebenfalls auf 1 Spalte reduziert
+   (statt 12), sonst reserviert grid-template-columns weiterhin 11
+   column-gaps zwischen den (jetzt leeren) 12 Spalten. Bei größeren
+   gap-Werten (z.B. gap-8/gap-12) summieren sich diese Lücken schnell
+   auf mehr als die verfügbare Containerbreite auf und die Zelle
+   ragt über den Rand hinaus, obwohl sie inhaltlich nur eine Spalte
+   breit ist. */
 @media (max-width: 767px) {
+  .twgb-row.grid-cols-12 {
+    grid-template-columns: 1fr;
+  }
   .col-span-1,  .col-span-2,  .col-span-3,
   .col-span-4,  .col-span-5,  .col-span-6,
   .col-span-7,  .col-span-8,  .col-span-9,
   .col-span-10, .col-span-11 {
-    grid-column: span 12 / span 12;
+    grid-column: span 1 / span 1;
+  }
+}
+
+/* ── Zeile: Spalten-Umbruch verzögern (Zeilen-Einstellung "Spalten-Umbruch
+   verzögern") ──
+   Standard-Verhalten: Spalten stapeln sich unter 768px, ab 768px erscheint
+   das konfigurierte Spalten-Layout. Diese Klassen verlängern den gestapelten
+   Zustand einer einzelnen Zeile gezielt über 768px hinaus, statt ihn (wie
+   oben) global zu erzwingen — dieselbe 1fr-Technik wie im Mobile-Block oben,
+   nur zeilen-scoped und mit anderer Ober-Breite.
+   Wichtig: es gibt bewusst keine "für immer gestapelt"-Option — spätestens
+   ab 1280px (xl) zeigt jede Zeile wieder ihr normales Spalten-Layout, damit
+   auf großen Bildschirmen nie versehentlich dauerhaft einspaltige Layouts
+   entstehen. */
+/* stack-until-lg: nur im 768–1023px-Fenster erzwingen (darunter greift bereits
+   der globale Mobile-Block oben, darüber soll das echte Spalten-Layout zeigen) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .twgb-row--stack-until-lg.grid-cols-12 {
+    grid-template-columns: 1fr;
+  }
+  .twgb-row--stack-until-lg .col-span-1,  .twgb-row--stack-until-lg .col-span-2,  .twgb-row--stack-until-lg .col-span-3,
+  .twgb-row--stack-until-lg .col-span-4,  .twgb-row--stack-until-lg .col-span-5,  .twgb-row--stack-until-lg .col-span-6,
+  .twgb-row--stack-until-lg .col-span-7,  .twgb-row--stack-until-lg .col-span-8,  .twgb-row--stack-until-lg .col-span-9,
+  .twgb-row--stack-until-lg .col-span-10, .twgb-row--stack-until-lg .col-span-11 {
+    grid-column: span 1 / span 1;
+  }
+}
+/* stack-until-xl: verlängert bis 1279px (deckt sowohl 768–1023 als auch
+   1024–1279 ab), ab 1280px (xl) immer normales Spalten-Layout */
+@media (max-width: 1279px) {
+  .twgb-row--stack-until-xl.grid-cols-12 {
+    grid-template-columns: 1fr;
+  }
+  .twgb-row--stack-until-xl .col-span-1,  .twgb-row--stack-until-xl .col-span-2,  .twgb-row--stack-until-xl .col-span-3,
+  .twgb-row--stack-until-xl .col-span-4,  .twgb-row--stack-until-xl .col-span-5,  .twgb-row--stack-until-xl .col-span-6,
+  .twgb-row--stack-until-xl .col-span-7,  .twgb-row--stack-until-xl .col-span-8,  .twgb-row--stack-until-xl .col-span-9,
+  .twgb-row--stack-until-xl .col-span-10, .twgb-row--stack-until-xl .col-span-11 {
+    grid-column: span 1 / span 1;
   }
 }
 

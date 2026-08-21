@@ -1,5 +1,31 @@
 # Changelog — TW GridBuilder
 
+## [2.18.1] — 2026-08-21
+
+### Fix
+- **„Spalten-Umbruch verzögern" (beide Schalter aktiv) hatte keine Obergrenze**: Waren beide Schalter einer Zeile aktiv, blieb sie bei jeder Bildschirmbreite einspaltig — auch auf großen Desktop-Monitoren, wo definitiv wieder das normale Spalten-Layout erwartet wird. Jetzt gilt eine feste Obergrenze bei 1280px (xl): ab dort zeigt jede Zeile immer ihr konfiguriertes Spalten-Layout, unabhängig von den Schaltern. Die CSS-Klasse `twgb-row--stack-always` wurde entsprechend zu `twgb-row--stack-until-xl` (mit `@media (max-width: 1279px)` statt unbegrenzt).
+
+## [2.18.0] — 2026-08-21
+
+### Feature
+- **Neuer Zeilen-Panel-Abschnitt „Grid-Einstellungen"**: „Spaltenreihenfolge auf dem Smartphone umkehren" (bisher unter „Ausrichtung & Verhalten") und „Trennlinie zwischen den Spalten" (bisher unter „Ecken & Effekte") sind jetzt gemeinsam in einer eigenen, thematisch passenderen Sektion gebündelt.
+- **„Spalten-Umbruch verzögern"** (im selben Abschnitt): zwei Schalter pro Zeile gegen das plötzliche „Umspringen" einer Zeile von gestapelten Elementen auf Spalten bei einer bestimmten Bildschirmbreite.
+  - Schalter 1 allein: Spalten erscheinen erst ab 1024px statt wie sonst ab 768px — die Zeile bleibt im Tablet-Bereich (768–1023px) so gestapelt wie auf dem Smartphone.
+  - Schalter 1 + 2 zusammen: Spalten erscheinen nie, die Zeile bleibt auf jeder Bildschirmgröße gestapelt.
+  - Schalter 2 allein betrifft nur die Abstände (siehe unten), da es zwischen Tablet und Desktop ohnehin kein separates Spalten-Layout gibt.
+  - Beide Schalter vereinheitlichen zusätzlich alle Innen-/Außen-Abstände und den Spalten-Gap dieser Zeile auf den vorherigen Breakpoint, damit auch dort kein unbeabsichtigter Sprung entsteht.
+
+### Kompatibilität
+- **Vollständig abwärtskompatibel:** neue optionale Felder `skip_md`/`skip_lg` auf Zeilenebene (Default `false`). Bestehende GridBuilder-Inhalte ohne diese Felder rendern unverändert. Die Spalten-Wirkung basiert auf zwei neuen, zeilen-scoped CSS-Klassen (`twgb-row--stack-until-lg`/`twgb-row--stack-always` in `assets/tw-gridbuilder-grid.css`), die nur bei aktivem Schalter gesetzt werden; die Abstands-Wirkung nutzt weiterhin die bestehende `_md`/`_lg`-Berechnung in `output.php`.
+
+## [2.15.1] — 2026-08-21
+
+### Fix
+- **Mobile-Overflow bei Zeilen mit größerem Spalten-Abstand (`gap-*`) behoben**: Die Mobile-Regel unter 768px setzte Zellen per `grid-column: span 12 / span 12`, ließ das zugrunde liegende `grid-template-columns: repeat(12, minmax(0,1fr))` der Zeile aber unverändert. Dadurch reservierte der Browser weiterhin 11 Column-Gaps zwischen den (jetzt leeren) 12 Spalten. Bei größeren Gap-Werten (z. B. `gap-8`/`gap-12`) summierten sich diese Phantom-Lücken auf mehr als die verfügbare Containerbreite und Zellen ragten auf schmalen Viewports über den Rand hinaus. Die Zeile wird unter 768px jetzt zusätzlich auf `grid-template-columns: 1fr` reduziert, die Zellen auf `grid-column: span 1 / span 1` — dadurch entstehen keine Phantom-Gaps mehr.
+
+### Kompatibilität
+- **Vollständig abwärtskompatibel:** reine CSS-Korrektur in `assets/tw-gridbuilder-grid.css`, keine Änderung am Datenformat oder an bestehenden Slice-Inhalten.
+
 ## [2.15.0] — 2026-08-20
 
 ### Feature

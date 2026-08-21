@@ -259,6 +259,7 @@
         mx: '0', mx_md: '0', mx_lg: '0',
         bg: '', bg_image: '', bg_video: '',
         mobile_reverse: false, text_align: '', align_v: '',
+        skip_md: false, skip_lg: false,
         radius_tl: '0', radius_tr: '0', radius_bl: '0', radius_br: '0',
         shadow_hover: false, custom_class: '', divider: false,
         anim: '', anim_delay: '', anim_duration: '',
@@ -328,6 +329,7 @@
         mb: r.mb || '0', mb_md: r.mb_md || r.mb || '0', mb_lg: r.mb_lg || r.mb_md || r.mb || '0',
         mx: r.mx || '0', mx_md: r.mx_md || r.mx || '0', mx_lg: r.mx_lg || r.mx_md || r.mx || '0',
         align_v: r.align_v || '',
+        skip_md: r.skip_md || false, skip_lg: r.skip_lg || false,
         radius_tl: migrateRadius(r, 'tl'), radius_tr: migrateRadius(r, 'tr'),
         radius_bl: migrateRadius(r, 'bl'), radius_br: migrateRadius(r, 'br'),
         shadow_hover: r.shadow_hover || false, custom_class: r.custom_class || '', divider: r.divider || false,
@@ -461,6 +463,29 @@
     function respSetAll(t, key, val) {
       const v = String(val);
       t[key] = v; t[key + '_md'] = v; t[key + '_lg'] = v;
+    }
+
+    // ── Zeile: Spalten-Umbruch verzögern (Abstands-Teil) ─────────────────────
+    // Betrifft alle Abstands-Felder der Zeile gemeinsam (nicht einzeln pro
+    // Feld) — beim Aktivieren werden bestehende Werte auf den vorherigen
+    // Breakpoint vereinheitlicht, damit der Sprung direkt vom vorherigen auf
+    // den nächsten Breakpoint erfolgt (z.B. sm → lg, wenn md übersprungen ist).
+    // Der Spalten-Teil (welcher Breakpoint das Spalten-Layout zeigt) läuft
+    // separat über die Klassen twgb-row--stack-until-lg/-xl in output.php —
+    // bewusst gedeckelt bei 1280px (xl), damit nie "für immer gestapelt"
+    // entstehen kann (siehe tw-gridbuilder-grid.css).
+    const ROW_RESP_FIELDS = ['py_top', 'py_bottom', 'gap', 'mt', 'mb', 'mx'];
+    function toggleRowSkip(row, bp) {
+      if (!row) return;
+      const key = bp === 'md' ? 'skip_md' : 'skip_lg';
+      row[key] = !row[key];
+      if (row[key]) {
+        if (bp === 'md') {
+          ROW_RESP_FIELDS.forEach((k) => { row[k + '_md'] = row[k]; });
+        } else {
+          ROW_RESP_FIELDS.forEach((k) => { row[k + '_lg'] = row[k + '_md']; });
+        }
+      }
     }
     // Zahleneingabe absichern: nur ganze Zahlen im erlaubten Bereich.
     function clampNum(val, min, max) {
@@ -984,6 +1009,7 @@
           mx: r.mx, mx_md: r.mx_md, mx_lg: r.mx_lg,
           bg: r.bg, bg_image: r.bg_image, bg_video: r.bg_video,
           mobile_reverse: r.mobile_reverse, text_align: r.text_align, align_v: r.align_v || '',
+          skip_md: !!r.skip_md, skip_lg: !!r.skip_lg,
           radius_tl: r.radius_tl, radius_tr: r.radius_tr, radius_bl: r.radius_bl, radius_br: r.radius_br,
           shadow_hover: r.shadow_hover, custom_class: r.custom_class || '', divider: !!r.divider,
           anim: r.anim || '', anim_delay: r.anim_delay || '', anim_duration: r.anim_duration || '',
@@ -1041,12 +1067,16 @@
 
     // ── Responsiver Abstands-Regler (aufklappbar auf drei Breakpoints) ───────
     // t = Zielobjekt, key = Basis-Feldname (Felder: key, key_md, key_lg).
-    const RESP_ROW = (t, key, label, max = 64) => `
+    // hideMd/hideLg = optionale Vue-Ausdrücke (z.B. 'panel.row.skip_md'): ist
+    // der Breakpoint für die Zeile übersprungen, wird seine Reglerzeile in der
+    // aufgeklappten Ansicht ausgeblendet (Werte übernehmen dann automatisch
+    // den vorherigen Breakpoint, siehe toggleRowSkip()).
+    const RESP_ROW = (t, key, label, max = 64, min = 0, hideMd = '', hideLg = '') => `
       <div class="pb-ctl" :class="{ 'pb-ctl-open': respOpen(${t}, '${key}') }">
         <div class="pb-ctl-main">
           <label class="pb-ctl-label">${label}</label>
           <template v-if="!respOpen(${t}, '${key}')">
-            ${SLIDER(`${t}.${key}`, `respSetAll(${t}, '${key}', $VAL)`, 0, max)}
+            ${SLIDER(`${t}.${key}`, `respSetAll(${t}, '${key}', $VAL)`, min, max)}
           </template>
           <span v-else class="pb-ctl-summary">{{ ${t}.${key} }} / {{ ${t}.${key}_md }} / {{ ${t}.${key}_lg }}</span>
           <button type="button" class="pb-ctl-bp"
@@ -1057,9 +1087,9 @@
           </button>
         </div>
         <div v-if="respOpen(${t}, '${key}')" class="pb-ctl-bps">
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-mobile"></i> Smartphone</span>${SLIDER(`${t}.${key}`, `${t}.${key} = $VAL`, 0, max)}</div>
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-tablet"></i> Tablet</span>${SLIDER(`${t}.${key}_md`, `${t}.${key}_md = $VAL`, 0, max)}</div>
-          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-desktop"></i> Desktop</span>${SLIDER(`${t}.${key}_lg`, `${t}.${key}_lg = $VAL`, 0, max)}</div>
+          <div class="pb-ctl-bp-row"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-mobile"></i> Smartphone</span>${SLIDER(`${t}.${key}`, `${t}.${key} = $VAL`, min, max)}</div>
+          <div class="pb-ctl-bp-row" v-if="${hideMd ? `!(${hideMd})` : 'true'}"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-tablet"></i> Tablet</span>${SLIDER(`${t}.${key}_md`, `${t}.${key}_md = $VAL`, min, max)}</div>
+          <div class="pb-ctl-bp-row" v-if="${hideLg ? `!(${hideLg})` : 'true'}"><span class="pb-ctl-bp-lbl"><i class="rex-icon fa fa-desktop"></i> Desktop</span>${SLIDER(`${t}.${key}_lg`, `${t}.${key}_lg = $VAL`, min, max)}</div>
         </div>
       </div>`;
 
@@ -1248,7 +1278,7 @@
           duplicateRow, copyRow, pasteRow,
           duplicateCell, copyCell, pasteCell,
           resetRowSettings, resetCellSettings,
-          toggleAcc, respOpen, respToggle, respSetAll, respKey, clampNum, toggleCorners,
+          toggleAcc, respOpen, respToggle, respSetAll, respKey, clampNum, toggleCorners, toggleRowSkip,
           // Abweichung vom Standard → Punkt in der Sektions-Kopfzeile
           rowSpacingDirty: (r) => ['py_top', 'py_bottom'].some((k) => respAny(r, k, '3'))
             || respAny(r, 'gap', '4')
@@ -1404,7 +1434,7 @@
       </div>
 
       <!-- Row Meta -->
-      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.divider || row.anim || row.link || hasMargin(row)">
+      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.divider || row.anim || row.link || hasMargin(row) || row.skip_md || row.skip_lg">
         <span v-if="row.container !== 'standard'" class="pb-tag">{{ row.container }}</span>
         <span v-if="row.content_width !== 'standard'" class="pb-tag">Inhalt: {{ row.content_width }}</span>
         <span v-if="row.bg" class="pb-tag">{{ row.bg }}</span>
@@ -1417,6 +1447,8 @@
         <span v-if="row.mb !== '0' || row.mb_md !== '0' || row.mb_lg !== '0'" class="pb-tag">M↓ {{ row.mb }}/{{ row.mb_md }}/{{ row.mb_lg }}</span>
         <span v-if="row.mx !== '0' || row.mx_md !== '0' || row.mx_lg !== '0'" class="pb-tag">M↔ {{ row.mx }}/{{ row.mx_md }}/{{ row.mx_lg }}</span>
         <span v-if="row.mobile_reverse" class="pb-tag"><i class="rex-icon fa fa-mobile"></i> Mobil umkehren</span>
+        <span v-if="row.skip_md && row.skip_lg" class="pb-tag"><i class="rex-icon fa fa-columns"></i> Spalten erst ab 1280px</span>
+        <span v-else-if="row.skip_md" class="pb-tag"><i class="rex-icon fa fa-columns"></i> Spalten erst ab 1024px</span>
         <span v-if="row.text_align" class="pb-tag">{{ row.text_align }}</span>
         <span v-if="hasRadius(row)" class="pb-tag"><i class="rex-icon fa fa-circle-notch"></i> Ecken</span>
         <span v-if="row.shadow_hover" class="pb-tag"><i class="rex-icon fa fa-square-o"></i> Hover-Schatten</span>
@@ -1657,19 +1689,19 @@
           <small v-if="panel.row.container !== 'full'" class="pb-hint pb-hint-tight">Inhaltsbreite nur wählbar, wenn Container = „Volle Browserbreite".</small>
 
           <div class="pb-sub-label">Innen-Abstände</div>
-          ${RESP_ROW('panel.row', 'py_top', '↑ Oben')}
-          ${RESP_ROW('panel.row', 'py_bottom', '↓ Unten')}
-          ${RESP_ROW('panel.row', 'gap', '⇄ Spalten-Gap', 16)}
+          ${RESP_ROW('panel.row', 'py_top', '↑ Oben', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
+          ${RESP_ROW('panel.row', 'py_bottom', '↓ Unten', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
+          ${RESP_ROW('panel.row', 'gap', '⇄ Spalten-Gap', 16, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
 
           <div class="pb-sub-label">Außen-Abstände</div>
-          ${RESP_ROW('panel.row', 'mt', '↑ Oben')}
-          ${RESP_ROW('panel.row', 'mb', '↓ Unten')}
-          ${RESP_ROW('panel.row', 'mx', '↔ Links/Rechts')}
+          ${RESP_ROW('panel.row', 'mt', '↑ Oben', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
+          ${RESP_ROW('panel.row', 'mb', '↓ Unten', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
+          ${RESP_ROW('panel.row', 'mx', '↔ Links/Rechts', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
         `)}
 
         ${SECTION('bg', 'Hintergrund', "!!(panel.row.bg || panel.row.bg_image || panel.row.bg_video)", BG_FIELDS('panel.row', 'pb-row'))}
 
-        ${SECTION('align', 'Ausrichtung &amp; Verhalten', "!!(panel.row.text_align || panel.row.align_v || panel.row.mobile_reverse)", `
+        ${SECTION('align', 'Ausrichtung &amp; Verhalten', "!!(panel.row.text_align || panel.row.align_v)", `
           <div class="pb-panel-grid cols-2">
             <div class="pb-field">
               <label class="pb-label">Text</label>
@@ -1686,16 +1718,35 @@
               </select>
             </div>
           </div>
+        `)}
+
+        ${SECTION('grid', 'Grid-Einstellungen', "!!(panel.row.mobile_reverse || panel.row.divider || panel.row.skip_md || panel.row.skip_lg)", `
+          <div class="pb-sub-label">Spalten-Umbruch verzögern</div>
+          <div class="pb-panel-section pb-panel-section-row">
+            <label class="pb-toggle" @click="toggleRowSkip(panel.row, 'md')">
+              <span class="pb-toggle-track" :class="{ on: panel.row.skip_md }"><span class="pb-toggle-knob" :class="{ on: panel.row.skip_md }"></span></span>
+              <span>Bei 768px noch nicht umbrechen (Layout bleibt wie auf dem Smartphone, bis 1024px erreicht sind)</span>
+            </label>
+          </div>
+          <div class="pb-panel-section pb-panel-section-row">
+            <label class="pb-toggle" @click="toggleRowSkip(panel.row, 'lg')">
+              <span class="pb-toggle-track" :class="{ on: panel.row.skip_lg }"><span class="pb-toggle-knob" :class="{ on: panel.row.skip_lg }"></span></span>
+              <span>Auch bei 1024px nicht umbrechen (Spalten erscheinen erst ab 1280px)</span>
+            </label>
+          </div>
+          <small class="pb-hint pb-hint-tight">Verhindert, dass diese Zeile bei einer bestimmten Bildschirmbreite plötzlich von gestapelten Elementen auf Spalten „umspringt" — betrifft sowohl das Spalten-Layout als auch alle Innen-/Außen-Abstände und den Spalten-Gap dieser Zeile. Erster Schalter allein: Spalten erscheinen erst ab 1024px statt ab 768px. Beide zusammen: Spalten erscheinen erst ab 1280px. Ab 1280px zeigt jede Zeile immer ihr normales Spalten-Layout — es gibt bewusst keine „für immer gestapelt"-Option. Zweiter Schalter allein hat auf die Spalten keinen Effekt (die erscheinen bereits ab 768px unverändert), wirkt aber weiterhin auf die Abstände.</small>
+
+          <div class="pb-sub-label" style="margin-top:1rem">Sonstiges</div>
           <div class="pb-panel-section pb-panel-section-row">
             ${TOGGLE('panel.row.mobile_reverse', 'Spaltenreihenfolge auf dem Smartphone umkehren')}
           </div>
-        `)}
-
-        ${SECTION('style', 'Ecken &amp; Effekte', "hasRadius(panel.row) || panel.row.shadow_hover || !!panel.row.custom_class || !!panel.row.divider", `
-          ${RADIUS_UI('panel.row')}
           <div class="pb-panel-section pb-panel-section-row">
             ${TOGGLE('panel.row.divider', 'Trennlinie zwischen den Spalten')}
           </div>
+        `)}
+
+        ${SECTION('style', 'Ecken &amp; Effekte', "hasRadius(panel.row) || panel.row.shadow_hover || !!panel.row.custom_class", `
+          ${RADIUS_UI('panel.row')}
           ${ADVANCED('panel.row')}
         `)}
 

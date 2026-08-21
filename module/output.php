@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.15.0
+ * @version 2.18.1
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -328,12 +328,26 @@ foreach ($pb_data['rows'] as $row) {
     );
     $row_cols_count = count($row_cell_spans);
 
+    // Breakpoint-Anpassung überspringen (Zeilen-Einstellung): das Spalten-Layout
+    // bleibt gestapelt (wie Smartphone), bis der nächste nicht übersprungene
+    // Breakpoint erreicht ist. skip_md allein verzögert bis 1024px, skip_md +
+    // skip_lg gemeinsam verzögert bis 1279px, ab 1280px (xl) zeigt jede Zeile immer ihr normales Spalten-Layout.
+    $skip_md  = !empty($row['skip_md']);
+    $skip_lg  = !empty($row['skip_lg']);
+    $stack_class = '';
+    if ($skip_md && $skip_lg) {
+        $stack_class = 'twgb-row--stack-until-xl';
+    } elseif ($skip_md) {
+        $stack_class = 'twgb-row--stack-until-lg';
+    }
+
     $grid_classes = implode(' ', array_filter([
         'grid grid-cols-12',
         pb_resp_class($gap_base, $gap_md, $gap_lg, 'gap-'),
         $align_v,
         $mobile_rev ? 'pb-mobile-reverse' : '',
         $row_divider ? 'divide-y divide-black/50 md:divide-y-0 md:divide-x' : '',
+        $stack_class,
         'twgb-row',
         $row_cols_count ? 'twgb-row--cols-' . $row_cols_count : '',
         $row_cell_spans ? 'twgb-row--span-' . implode('-', $row_cell_spans) : '',

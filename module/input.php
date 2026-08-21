@@ -2,7 +2,7 @@
 /* base-module-config
 modulname = "0100 - Standard (TW GridBuilder)"
 modulkey = "tw_gridbuilder"
-version = "2.15.0"
+version = "2.18.1"
 requirements = "tw_gridbuilder"
 status = "1"
 framework = "1"
@@ -10,7 +10,7 @@ base-module-config
 */
 /**
  * TW GridBuilder — Modul-Input
- * @version 2.15.0
+ * @version 2.18.1
  */
 /* tw_gridblock selbst - NICHT LÖSCHEN, identifiziert das TW GridBuilder-Modul selbst und darf in keinem anderen Modul-Input vorkommen */
 
