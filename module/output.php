@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.18.1
+ * @version 2.18.2
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -442,6 +442,7 @@ foreach ($pb_data['rows'] as $row) {
                 echo ob_get_clean();
             } catch (\Throwable $e) {
                 ob_end_clean();
+                rex_logger::logException($e);
                 if (rex::isBackend()) {
                     echo '<div class="alert alert-danger">Fehler: ' . htmlspecialchars($e->getMessage()) . '</div>';
                 }
@@ -453,5 +454,3 @@ foreach ($pb_data['rows'] as $row) {
 
     echo '</div></' . $row_tag . '></section>';
 }
-
-

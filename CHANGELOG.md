@@ -1,5 +1,14 @@
 # Changelog — TW GridBuilder
 
+## [2.18.2] — 2026-08-24
+
+### Fix
+- **Exceptions eingebetteter Module werden im Frontend nicht mehr still verworfen**: Schlägt die Ausführung eines Moduls innerhalb einer GridBuilder-Zelle fehl, wird der abgefangene Fehler jetzt mit `rex_logger::logException()` im REDAXO-Systemlog protokolliert. Die öffentliche Seite zeigt weiterhin keine technischen Fehlerdetails; im Backend bleibt die vorhandene Fehlermeldung sichtbar.
+
+### Kompatibilität
+- Vollständig abwärtskompatibel: keine Änderung am gespeicherten GridBuilder-JSON, an bestehenden Slices oder an der regulären Frontend-Ausgabe.
+- **Modul-Output aktualisieren:** Damit das Logging greift, muss `module/output.php` in die bestehende REDAXO-Moduldefinition „Standard (TW GridBuilder)“ übernommen werden. Input und CSS sind funktional unverändert; ein CSS-Rebuild ist nicht erforderlich.
+
 ## [2.18.1] — 2026-08-21
 
 ### Fix
