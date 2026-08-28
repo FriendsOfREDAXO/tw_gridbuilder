@@ -868,8 +868,24 @@
     function moveSlot(idx, dir) {
       const t = idx + dir;
       if (t < 0 || t >= panel.cell.modules.length) return;
-      [panel.cell.modules[t], panel.cell.modules[idx]] = [panel.cell.modules[idx], panel.cell.modules[t]];
-      panel.slotIdx = t;
+      // Offene Formularwerte des aktiven Slots sichern, BEVOR sich die
+      // Reihenfolge (und damit die Index→Slot-Zuordnung) ändert. Ohne diesen
+      // Schritt zeigt der Formular-Container weiterhin die Felder des zuvor
+      // aktiven Slots, während panel.slotIdx bereits auf einen anderen Slot
+      // deutet – der nächste collectFromDom()-Aufruf (z.B. beim Anklicken des
+      // verschobenen Moduls oder bei „Übernehmen") liest dann keine passenden
+      // Felder mehr und überschreibt slot.values mit einem leeren Objekt.
+      collectFromDom();
+      const activeSlotObj = activeSlot();
+      const mods = panel.cell.modules;
+      [mods[t], mods[idx]] = [mods[idx], mods[t]];
+      // Der Editor bleibt an demselben Slot-Objekt (dem Objekt folgen, nicht
+      // dem Index). Das geladene Formular passt damit weiterhin zum aktiven
+      // Slot; ein Neuladen ist nicht nötig.
+      if (activeSlotObj) {
+        const ni = mods.indexOf(activeSlotObj);
+        if (ni !== -1) panel.slotIdx = ni;
+      }
     }
 
     // Modul innerhalb der Zelle duplizieren (inkl. aller Werte, mit neuer ID)

@@ -1,5 +1,13 @@
 # Changelog — TW GridBuilder
 
+## [2.18.3] — 2026-08-28
+
+### Fix
+- **Modul-Inhalt ging beim Verschieben per Pfeil-Button teilweise verloren**: Wurde in einer Spalte ein Modul über die Pfeil-Buttons (▲/▼) umsortiert, während gleichzeitig ein Modul-Formular geöffnet war, konnte der Inhalt eines Moduls gelöscht werden. Ursache: `moveSlot()` tauschte die Reihenfolge, ohne vorher die offenen Formularwerte zu sichern und ohne den aktiven Editor am richtigen Slot zu halten — `panel.slotIdx` zeigte danach auf einen anderen Slot als das noch im DOM stehende Formular. Der nächste `collectFromDom()`-Aufruf (beim Anklicken des verschobenen Moduls oder bei „Übernehmen") fand keine passenden Felder und überschrieb `slot.values` mit einem leeren Objekt. `moveSlot()` sichert jetzt zuerst die Formularwerte (`collectFromDom()`) und lässt den Editor dem verschobenen Slot-Objekt folgen statt dem Index.
+
+### Kompatibilität
+- Vollständig abwärtskompatibel: reine JS-Änderung im Backend, keine Änderung am gespeicherten GridBuilder-JSON, an `module/input.php`, `module/output.php` oder am CSS. Kein Modul-Sync und kein CSS-Rebuild erforderlich.
+
 ## [2.18.2] — 2026-08-24
 
 ### Fix
