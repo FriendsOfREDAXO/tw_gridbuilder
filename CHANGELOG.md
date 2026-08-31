@@ -1,5 +1,21 @@
 # Changelog — TW GridBuilder
 
+## [2.19.0] — 2026-08-31
+
+### Feature
+- **Gleichmäßige 6-Spalten-Zeilen brechen jetzt gestuft um (1 → 2 → 3 → 6)**: Eine Zeile mit sechs gleich breiten Spalten (je `2/12`) sprang bisher unter 768px auf eine Spalte und ab 768px direkt auf alle sechs nebeneinander — auf Tablets und kleinen Notebooks standen sechs Karten à ~120px gequetscht in einer Reihe. Neu:
+  - **< sm (bis 639px)** → 1-spaltig (wie bisher, über den globalen Mobile-Block)
+  - **sm (640–767px)** → 2 nebeneinander
+  - **md/lg (768–1279px)** → 3 nebeneinander
+  - **ab xl (ab 1280px)** → unverändert alle 6 nebeneinander (`col-span-2`)
+- Greift automatisch anhand der bereits vorhandenen Struktur-Klassen `.twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2`; kein neues Feld, keine Konfiguration nötig.
+- Zeilen mit aktivem **„Spalten-Umbruch verzögern"** (`twgb-row--stack-until-lg` / `-xl`) sind per `:not()` ausgenommen — diese explizite Einstellung behält Vorrang.
+- Zusätzliches Opt-in für beliebige Zeilen: die eigene CSS-Klasse `twgb-grid-2-3-6` in den Zeilen-Einstellungen setzt dieselbe Stufung, auch bei ungleichen Spaltenbreiten.
+
+### Kompatibilität
+- **Nicht vollständig abwärtskompatibel (bewusst):** Bestehende gleichmäßige 6-Spalten-Zeilen ändern ihr Verhalten im Bereich 640–1279px (vorher: ab 768px sechs nebeneinander → neu: 2 bzw. 3). Layouts mit anderer Spaltenanzahl oder ungleichen Spannweiten sind nicht betroffen. Das gespeicherte GridBuilder-JSON, `module/input.php` und `module/output.php` bleiben unverändert.
+- **Reine CSS-Änderung** in `assets/tw-gridbuilder-grid.css`. Kein Modul-Sync nötig; ein **CSS-Rebuild des Themes ist erforderlich**, damit die neuen `@media`-Regeln in die kompilierte `app.css` gelangen.
+
 ## [2.18.3] — 2026-08-28
 
 ### Fix

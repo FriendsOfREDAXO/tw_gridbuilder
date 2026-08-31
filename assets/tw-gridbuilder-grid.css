@@ -152,3 +152,38 @@
     order: 0;
   }
 }
+
+/* ── Gleichmäßige 6-Spalten-Zeile gestuft umbrechen (1 → 2 → 3 → 6) ──
+     < sm  (bis 639px)   → 1-spaltig (greift bereits über den globalen Mobile-Block)
+     sm    (640–767px)   → 2 nebeneinander
+     md/lg (768–1279px)  → 3 nebeneinander
+     ab xl (ab 1280px)   → normales Layout (6× col-span-2)
+
+   Greift automatisch auf jede gleichmäßige 6er-Zeile
+   (`.twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2`). Ausgenommen sind Zeilen mit
+   aktivierter Einstellung "Spalten-Umbruch verzögern" (stack-until-*), damit
+   diese explizite Wahl gewinnt. Zusätzlich per Opt-in-Klasse `twgb-grid-2-3-6`
+   auf beliebige Zeilen anwendbar (Klasse landet am Container → Nachfahren-Selektor).
+
+   `.grid-cols-12` in den Selektoren hebt die Spezifität über den globalen
+   Mobile-/Stack-Block (2 Klassen), damit die Umbruchstufen zuverlässig greifen. */
+@media (min-width: 640px) and (max-width: 767px) {
+  .twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2.grid-cols-12:not(.twgb-row--stack-until-lg):not(.twgb-row--stack-until-xl),
+  .twgb-grid-2-3-6 .twgb-row.grid-cols-12 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2 > .twgb-cell,
+  .twgb-grid-2-3-6 .twgb-row > .twgb-cell {
+    grid-column: span 1 / span 1;
+  }
+}
+@media (min-width: 768px) and (max-width: 1279px) {
+  .twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2.grid-cols-12:not(.twgb-row--stack-until-lg):not(.twgb-row--stack-until-xl),
+  .twgb-grid-2-3-6 .twgb-row.grid-cols-12 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .twgb-row--cols-6.twgb-row--span-2-2-2-2-2-2:not(.twgb-row--stack-until-lg):not(.twgb-row--stack-until-xl) > .twgb-cell,
+  .twgb-grid-2-3-6 .twgb-row > .twgb-cell {
+    grid-column: span 1 / span 1;
+  }
+}
