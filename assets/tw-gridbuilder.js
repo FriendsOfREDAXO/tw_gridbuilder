@@ -231,7 +231,7 @@
     function makeCell(defaultSpan) {
       return {
         id: uid(), span: defaultSpan, modules: [],
-        bg: '', bg_image: '', bg_video: '',
+        bg: '', bg_image: '', bg_video: '', surface: '',
         py_top: '0', py_top_md: '0', py_top_lg: '0',
         py_bottom: '0', py_bottom_md: '0', py_bottom_lg: '0',
         px: '0', px_md: '0', px_lg: '0',
@@ -257,7 +257,7 @@
         mt: '0', mt_md: '0', mt_lg: '0',
         mb: '0', mb_md: '0', mb_lg: '0',
         mx: '0', mx_md: '0', mx_lg: '0',
-        bg: '', bg_image: '', bg_video: '',
+        bg: '', bg_image: '', bg_video: '', surface: '',
         mobile_reverse: false, text_align: '', align_v: '',
         skip_md: false, skip_lg: false,
         radius_tl: '0', radius_tr: '0', radius_bl: '0', radius_br: '0',
@@ -292,7 +292,7 @@
       const base_mx = c.mx || '0';
       const cell = {
         id: c.id || uid(), span: c.span || 12, modules: [],
-        bg: c.bg || '', bg_image: c.bg_image || '', bg_video: c.bg_video || '',
+        bg: c.bg || '', bg_image: c.bg_image || '', bg_video: c.bg_video || '', surface: c.surface || '',
         py_top:    base_pt, py_top_md:    c.py_top_md    || base_pt, py_top_lg:    c.py_top_lg    || c.py_top_md    || base_pt,
         py_bottom: base_pb, py_bottom_md: c.py_bottom_md || base_pb, py_bottom_lg: c.py_bottom_lg || c.py_bottom_md || base_pb,
         px:        base_px, px_md:        c.px_md        || base_px, px_lg:        c.px_lg        || c.px_md        || base_px,
@@ -333,6 +333,7 @@
         radius_tl: migrateRadius(r, 'tl'), radius_tr: migrateRadius(r, 'tr'),
         radius_bl: migrateRadius(r, 'bl'), radius_br: migrateRadius(r, 'br'),
         shadow_hover: r.shadow_hover || false, custom_class: r.custom_class || '', divider: r.divider || false,
+        surface: r.surface || '',
         anim: r.anim || '', anim_delay: r.anim_delay || '', anim_duration: r.anim_duration || '',
         link: r.link || '', link_label: r.link_label || '',
         cells: (r.cells || []).map(migrateCell),
@@ -1023,7 +1024,7 @@
           mt: r.mt, mt_md: r.mt_md, mt_lg: r.mt_lg,
           mb: r.mb, mb_md: r.mb_md, mb_lg: r.mb_lg,
           mx: r.mx, mx_md: r.mx_md, mx_lg: r.mx_lg,
-          bg: r.bg, bg_image: r.bg_image, bg_video: r.bg_video,
+          bg: r.bg, bg_image: r.bg_image, bg_video: r.bg_video, surface: r.surface || '',
           mobile_reverse: r.mobile_reverse, text_align: r.text_align, align_v: r.align_v || '',
           skip_md: !!r.skip_md, skip_lg: !!r.skip_lg,
           radius_tl: r.radius_tl, radius_tr: r.radius_tr, radius_bl: r.radius_bl, radius_br: r.radius_br,
@@ -1032,7 +1033,7 @@
           link: r.link || '', link_label: r.link_label || '',
           cells: r.cells.map((c) => ({
             id: c.id, span: c.span,
-            bg: c.bg, bg_image: c.bg_image, bg_video: c.bg_video,
+            bg: c.bg, bg_image: c.bg_image, bg_video: c.bg_video, surface: c.surface || '',
             py_top: c.py_top, py_top_md: c.py_top_md, py_top_lg: c.py_top_lg,
             py_bottom: c.py_bottom, py_bottom_md: c.py_bottom_md, py_bottom_lg: c.py_bottom_lg,
             px: c.px, px_md: c.px_md, px_lg: c.px_lg,
@@ -1171,6 +1172,13 @@
             <a v-if="${t}.bg_video" class="btn btn-default" href="javascript:void(0)" @click.prevent="${t}.bg_video = ''" title="Entfernen"><i class="rex-icon rex-icon-delete"></i></a>
           </div>
         </div>
+      </div>
+      <div class="pb-field pb-grid-mid">
+        <label class="pb-label">Farbkontext (Schrift &amp; Links)</label>
+        <select class="form-control" v-model="${t}.surface">
+          <option v-for="o in surfaceOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
+        </select>
+        <small class="pb-hint">Gibt <code>data-surface</code> aus; Schrift-/Link-/Hover-Farben legt dein Projekt-CSS fest (Anleitung: docs/farbkontext.md). „Automatisch" = kein Attribut, bisheriges Verhalten.</small>
       </div>`;
 
     // ── Erweitert: Schatten bei Hover + eigene CSS-Klasse ─────────────────────
@@ -1376,6 +1384,17 @@
             { value: 'bg-neutral-100',   label: 'Neutral 100' },
             { value: 'bg-neutral-50',    label: 'Neutral 50' },
           ],
+          // Farbkontext: gibt data-surface="…" aus. Schrift-/Link-/Hover-Farben
+          // legt das Projekt-CSS fest (docs/farbkontext.md). '' = kein Attribut →
+          // unverändertes bisheriges Verhalten.
+          surfaceOptions: [
+            { value: '',          label: 'Automatisch (kein data-surface)' },
+            { value: 'base',      label: 'Hell (zurücksetzen)' },
+            { value: 'alt',       label: 'Abgesetzt / hell' },
+            { value: 'inverse',   label: 'Dunkel (invers)' },
+            { value: 'primary',   label: 'Primärfarbe' },
+            { value: 'secondary', label: 'Sekundärfarbe' },
+          ],
           textAlignOptions: [
             { value: '',            label: 'Standard (links)' },
             { value: 'text-center', label: 'Zentriert' },
@@ -1450,10 +1469,11 @@
       </div>
 
       <!-- Row Meta -->
-      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.divider || row.anim || row.link || hasMargin(row) || row.skip_md || row.skip_lg">
+      <div class="pb-row-meta" v-if="row.bg || row.bg_image || row.bg_video || row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4' || row.container !== 'standard' || row.content_width !== 'standard' || row.py_top !== '3' || row.py_top_md !== '3' || row.py_top_lg !== '3' || row.py_bottom !== '3' || row.py_bottom_md !== '3' || row.py_bottom_lg !== '3' || row.mobile_reverse || row.text_align || row.align_v || hasRadius(row) || row.shadow_hover || row.custom_class || row.divider || row.anim || row.link || hasMargin(row) || row.skip_md || row.skip_lg || row.surface">
         <span v-if="row.container !== 'standard'" class="pb-tag">{{ row.container }}</span>
         <span v-if="row.content_width !== 'standard'" class="pb-tag">Inhalt: {{ row.content_width }}</span>
         <span v-if="row.bg" class="pb-tag">{{ row.bg }}</span>
+        <span v-if="row.surface" class="pb-tag"><i class="rex-icon fa fa-adjust"></i> {{ row.surface }}</span>
         <span v-if="row.bg_image" class="pb-tag"><i class="rex-icon fa fa-image"></i> {{ row.bg_image }}</span>
         <span v-if="row.bg_video" class="pb-tag"><i class="rex-icon fa fa-film"></i> {{ row.bg_video }}</span>
         <span v-if="row.gap !== '4' || row.gap_md !== '4' || row.gap_lg !== '4'" class="pb-tag">Gap {{ row.gap }}/{{ row.gap_md }}/{{ row.gap_lg }}</span>
@@ -1502,8 +1522,9 @@
             <div v-if="cell.modules.length > 0" class="pb-cell-content">
               <div class="pb-cell-meta">
                 <div class="pb-cell-info">{{ cell.span }}/12 · {{ cell.modules.length }} Modul(e)</div>
-                <div v-if="cell.bg || cell.bg_image || cell.bg_video || cell.py_top !== '0' || cell.py_top_md !== '0' || cell.py_top_lg !== '0' || cell.py_bottom !== '0' || cell.py_bottom_md !== '0' || cell.py_bottom_lg !== '0' || cell.px !== '0' || cell.px_md !== '0' || cell.px_lg !== '0' || cell.align !== 'start' || cell.text_align || hasRadius(cell) || cell.shadow_hover || cell.custom_class || cell.anim || cell.link || hasMargin(cell)" class="pb-cell-tags">
+                <div v-if="cell.bg || cell.bg_image || cell.bg_video || cell.py_top !== '0' || cell.py_top_md !== '0' || cell.py_top_lg !== '0' || cell.py_bottom !== '0' || cell.py_bottom_md !== '0' || cell.py_bottom_lg !== '0' || cell.px !== '0' || cell.px_md !== '0' || cell.px_lg !== '0' || cell.align !== 'start' || cell.text_align || hasRadius(cell) || cell.shadow_hover || cell.custom_class || cell.anim || cell.link || hasMargin(cell) || cell.surface" class="pb-cell-tags">
                   <span v-if="cell.bg" class="pb-tag">{{ cell.bg }}</span>
+                  <span v-if="cell.surface" class="pb-tag"><i class="rex-icon fa fa-adjust"></i> {{ cell.surface }}</span>
                   <span v-if="cell.bg_image" class="pb-tag"><i class="rex-icon fa fa-image"></i> {{ cell.bg_image }}</span>
                   <span v-if="cell.bg_video" class="pb-tag"><i class="rex-icon fa fa-film"></i> {{ cell.bg_video }}</span>
                   <span v-if="cell.py_top !== '0' || cell.py_top_md !== '0' || cell.py_top_lg !== '0'" class="pb-tag">↑ {{ cell.py_top }}/{{ cell.py_top_md }}/{{ cell.py_top_lg }}</span>
@@ -1641,7 +1662,7 @@
             ${RESP_ROW('panel.cell', 'mx', '↔ Links/Rechts')}
           `)}
 
-          ${SECTION('bg', 'Hintergrund', "!!(panel.cell.bg || panel.cell.bg_image || panel.cell.bg_video)", BG_FIELDS('panel.cell', 'pb-cell'))}
+          ${SECTION('bg', 'Hintergrund', "!!(panel.cell.bg || panel.cell.bg_image || panel.cell.bg_video || panel.cell.surface)", BG_FIELDS('panel.cell', 'pb-cell'))}
 
           ${SECTION('align', 'Ausrichtung', "!!(panel.cell.text_align || panel.cell.align !== 'start')", `
             <div class="pb-panel-grid cols-2">
@@ -1715,7 +1736,7 @@
           ${RESP_ROW('panel.row', 'mx', '↔ Links/Rechts', 64, 0, 'panel.row.skip_md', 'panel.row.skip_lg')}
         `)}
 
-        ${SECTION('bg', 'Hintergrund', "!!(panel.row.bg || panel.row.bg_image || panel.row.bg_video)", BG_FIELDS('panel.row', 'pb-row'))}
+        ${SECTION('bg', 'Hintergrund', "!!(panel.row.bg || panel.row.bg_image || panel.row.bg_video || panel.row.surface)", BG_FIELDS('panel.row', 'pb-row'))}
 
         ${SECTION('align', 'Ausrichtung &amp; Verhalten', "!!(panel.row.text_align || panel.row.align_v)", `
           <div class="pb-panel-grid cols-2">

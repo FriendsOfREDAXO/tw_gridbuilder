@@ -16,3 +16,17 @@ if (rex_string::versionCompare($this->getVersion(), '2.14.0', '<')) {
         . 'Die gespeicherten Slice-Inhalte und das JSON in <code>REX_VALUE[1]</code> bleiben unverändert erhalten.'
     );
 }
+
+if (rex_string::versionCompare($this->getVersion(), '2.20.0', '<')) {
+    $this->setProperty(
+        'successmsg',
+        '<br><strong>Updatehinweis TW GridBuilder 2.20.0:</strong> '
+        . 'Neues optionales Feld <code>Farbkontext</code> (<code>data-surface</code>) pro Zeile/Zelle. '
+        . 'Dafür bitte <code>module/output.php</code> UND <code>module/input.php</code> der bestehenden '
+        . 'GridBuilder-Moduldefinition „Standard (TW GridBuilder)" auf diese Version aktualisieren '
+        . '(nur den Code ersetzen, Modul nicht neu anlegen). Gespeicherte Slice-Inhalte und '
+        . '<code>REX_VALUE[1]</code> bleiben unverändert; ohne gesetzten Farbkontext ändert sich die '
+        . 'Ausgabe nicht. <code>data-surface</code> wirkt nur mit passendem Projekt-CSS – '
+        . 'Anleitung inkl. Copy-Paste-CSS in <code>redaxo/src/addons/tw_gridbuilder/docs/farbkontext.md</code>.'
+    );
+}

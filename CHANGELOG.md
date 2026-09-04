@@ -1,5 +1,79 @@
 # Changelog — TW GridBuilder
 
+## [2.20.0] — 2026-09-04
+
+### Feature — Farbkontext pro Zeile und Zelle (`data-surface`)
+
+Zeilen- und Zellen-Panel haben im Abschnitt **„Hintergrund"** ein neues Feld
+**„Farbkontext (Schrift & Links)"**. Es gibt auf dem Element ein
+`data-surface="…"`-Attribut aus, über das das **Projekt-CSS** Schrift-, Link- und
+Hover-Farben passend zum Untergrund festlegt. Konzept, CSS-Vertrag und eine
+fertige Umsetzung zum Kopieren (mit und ohne Tailwind, ganz ohne weiteres Addon):
+**`docs/farbkontext.md`**. Wer das getaweb-`base`-Addon (≥ 12.4.0) nutzt, bekommt
+dieses CSS bereits als `theme-tokens.css` mitgeliefert.
+
+#### Hintergrund / Motivation
+
+Bisher wurde die Lesbarkeit auf farbigen/dunklen Zellen über CSS-Regeln im Theme
+erzwungen, die eine **feste Liste dunkler `bg-*`-Klassen** kennen mussten
+(`:is(.bg-black, .bg-primary-800, …) .content { color:#fff }`). Bei jeder neuen
+Projekt-Palette musste diese Liste neu bewertet und gepflegt werden; Hover-Farben
+von Links waren oft „rot auf rot" oder unsichtbar. Der Farbkontext dreht das um:
+die Fläche **deklariert ihre Rolle** (`data-surface="inverse"` …), und eine
+einzige CSS-Regel im Projekt setzt daraufhin die passenden Farben – ohne dass
+GridBuilder oder Stylesheet feste Farbwert-Listen kennen.
+
+#### Auswahlmöglichkeiten
+
+| Wert | Ausgegebenes Attribut | Wirkung |
+|---|---|---|
+| **Automatisch** (Default) | *keins* | Unverändertes bisheriges Markup; dein vorhandenes CSS greift weiter. |
+| **Hell (zurücksetzen)** | `data-surface="base"` | Erzwingt hellen Kontext (z. B. innerhalb einer dunklen Elternzeile). |
+| **Abgesetzt / hell** | `data-surface="alt"` | Off-White-Fläche, dunkle Schrift. |
+| **Dunkel (invers)** | `data-surface="inverse"` | Dunkle Fläche, helle Schrift, helle Links. |
+| **Primärfarbe** | `data-surface="primary"` | Fläche in `--color-primary`, Schrift in `--color-on-primary`. |
+| **Sekundärfarbe** | `data-surface="secondary"` | Fläche in `--color-secondary`, Schrift in `--color-on-secondary`. |
+
+Das Attribut wird bei Zeilen auf dasselbe Element gesetzt wie der Hintergrund
+(`<section>` bei voller Browserbreite, sonst der innere Container), bei Zellen auf
+das Zell-Element. Serverseitige Whitelist in `pb_surface_attr()` – unbekannte
+Werte erzeugen kein Attribut.
+
+#### Verhältnis zum vorhandenen Feld „Farbe" (`bg`)
+
+Beide Felder sind unabhängig:
+
+- **„Farbe"** setzt weiterhin eine Tailwind-`bg-*`-Utility (paint des Hintergrunds).
+- **„Farbkontext"** setzt nur `data-surface` (Schrift/Link/Hover-Kontext).
+- Sind beide gesetzt, gewinnt die `bg-*`-Utility für den Hintergrund; `data-surface`
+  liefert trotzdem die passenden Vordergrundfarben. Für `primary`/`secondary`/`inverse`
+  malt `data-surface` den Hintergrund selbst, sofern **keine** `bg-*`-Utility gesetzt ist.
+
+#### Backend
+
+- Struktur-Vorschau (Modul-Output im Backend) und Canvas-Meta (Zeilen-/Zellen-Tags)
+  zeigen den gesetzten Farbkontext als eigenes Tag mit Kontrast-Icon.
+- Der Abschnitt „Hintergrund" im Panel klappt automatisch auf / bekommt den
+  „gesetzt"-Punkt, sobald ein Farbkontext gewählt ist.
+
+### Kompatibilität
+
+- **Vollständig abwärtskompatibel.** Neues optionales Feld `surface` auf Zeilen- und
+  Zellenebene, Default `''`. Bestehendes GridBuilder-JSON ohne das Feld rendert
+  **byte-identisch** wie zuvor – es wird kein `data-surface` ausgegeben.
+- `migrateRow()` / `migrateCell()` / `serialize()` / `makeRow()` / `makeCell()` in
+  `assets/tw-gridbuilder.js` ergänzen das Feld additiv mit Default `''`.
+- **Modul-Sync erforderlich:** `module/output.php` **und** `module/input.php` müssen
+  in die bestehende REDAXO-Moduldefinition „Standard (TW GridBuilder)" übernommen
+  werden (Code ersetzen, Modul **nicht** neu anlegen). Gespeicherte Slice-Inhalte
+  und `REX_VALUE[1]` bleiben unverändert.
+- **Wirkung nur mit Projekt-CSS:** `data-surface` ist ein Haken für dein Stylesheet.
+  Ohne passende Regeln (siehe `docs/farbkontext.md`) bleibt das Attribut wirkungslos
+  – kein Fehler, „Automatisch" verhält sich exakt wie bisher. Nach dem Ergänzen der
+  Regeln ist ein CSS-Rebuild des Themes nötig.
+- Kein Assets-URL-Bump nötig über die Version hinaus: `boot.php` hängt bereits
+  `filemtime()` an die CSS/JS-URL.
+
 ## [2.19.0] — 2026-08-31
 
 ### Feature

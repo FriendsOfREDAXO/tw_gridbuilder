@@ -249,6 +249,43 @@ Tablet- und Desktop-Klassen werden nur ausgegeben wenn sie vom jeweils kleineren
 - **Videos:** `relative z-10` auf dem Container + `.video-docker`-Div
 - **Focuspoint:** wird automatisch ausgelesen wenn das Addon aktiv ist
 
+### Farbkontext (`data-surface`)
+
+Zeilen und Zellen können im Panel-Abschnitt **„Hintergrund"** einen **Farbkontext**
+setzen. Er gibt auf dem Element ein `data-surface="…"`-Attribut aus. Das Attribut
+allein bewirkt nichts – es ist ein **Haken für dein Projekt-CSS**, an dem du
+Schrift-, Link- und Hover-Farben passend zum Untergrund festlegst.
+
+**Zweck:** Bei farbigen oder dunklen Flächen war die Lesbarkeit bisher davon
+abhängig, dass das Projekt-CSS jede in Frage kommende `bg-*`-Klasse als „dunkel"
+kannte (fest verdrahtete Selektor-Liste). Bei einer neuen Palette brach das
+regelmäßig – weiße Schrift auf hellem Grund, unsichtbare Link-Hover. Mit
+`data-surface` **deklariert die Fläche ihre Rolle**, und eine einzige CSS-Regel
+setzt die Farben – ohne feste Farbwert-Listen.
+
+| Auswahl | Attribut | gedachte Bedeutung |
+|---|---|---|
+| **Automatisch** (Default) | *keins* | Unverändertes Markup, dein bisheriges CSS greift weiter. |
+| Hell (zurücksetzen) | `data-surface="base"` | Heller Standardgrund, z. B. in einer dunklen Elternzeile. |
+| Abgesetzt / hell | `data-surface="alt"` | Leicht abgesetzte helle Fläche. |
+| Dunkel (invers) | `data-surface="inverse"` | Dunkle Fläche, helle Schrift + Links. |
+| Primärfarbe | `data-surface="primary"` | Fläche in der Primär-Markenfarbe. |
+| Sekundärfarbe | `data-surface="secondary"` | Fläche in der Sekundär-Markenfarbe. |
+
+**Platzierung:** Bei Zeilen auf demselben Element wie der Hintergrund – `<section>`
+bei „Volle Browserbreite", sonst der innere Container. Bei Zellen auf dem
+Zell-Element. Serverseitige Whitelist in `pb_surface_attr()`.
+
+**Verhältnis zu „Hintergrundfarbe" (`bg`):** unabhängige Felder. `bg` malt den
+Hintergrund (Tailwind-Utility), `data-surface` steuert die Schriftfarben.
+
+**Einrichtung im Projekt:** Konzept, CSS-Vertrag und eine fertige Umsetzung zum
+Kopieren – mit und ohne Tailwind, **ohne weiteres Addon** – stehen in
+[`docs/farbkontext.md`](docs/farbkontext.md). Ohne solches CSS bleibt `data-surface`
+wirkungslos (kein Fehler); „Automatisch" verhält sich wie in Versionen vor 2.20.0.
+Wer das getaweb-`base`-Addon (≥ 12.4.0) nutzt, bekommt dieses CSS bereits als
+`theme-tokens.css` mitgeliefert.
+
 ### Modulfilter
 
 Nur Module mit dem Kommentar `/* tw_gridblock kompatibel */` irgendwo im Input-Code erscheinen in der Modulauswahl. So lässt sich gezielt steuern welche Module im Pagebuilder nutzbar sind.
@@ -380,6 +417,7 @@ Zeilen und Zellen lassen sich kopieren (`fa-copy`) und an anderer Stelle wieder 
 | Spalten-Gap | 0–16 pro Breakpoint | `gap-{n} md:gap-{n} lg:gap-{n}` |
 | Außen oben/unten/seitl. | 0–16 pro Breakpoint | `mt-*` / `mb-*` / `mx-*` (+ `md:`/`lg:`) auf der `<section>` |
 | Hintergrundfarbe | TW-Klasse | direkt als Klasse |
+| Farbkontext | `''`, `base`, `alt`, `inverse`, `primary`, `secondary` | `data-surface="…"` (leer → kein Attribut); siehe „Farbkontext" |
 | Hintergrundbild | Dateiname | `background-image` Style + Focuspoint |
 | Hintergrundvideo | Dateiname | `.video-docker` |
 | Textausrichtung | `text-left`, `text-center`, `text-right` | direkt als Klasse |
@@ -399,6 +437,7 @@ Zeilen und Zellen lassen sich kopieren (`fa-copy`) und an anderer Stelle wieder 
 | Ausrichtung vertikal | `start`, `center`, `end` | — / `flex flex-col justify-center` / `flex flex-col justify-end` |
 | Abgerundete Ecken | Stufe 0–9 je Ecke (`0`, `xs`, `sm`, `md`, `lg`, `xl`, `2xl`, `3xl`, `4xl`, `full`) | `rounded-*` bzw. `rounded-tl-*` / `rounded-tr-*` / `rounded-bl-*` / `rounded-br-*` |
 | Hintergrundfarbe | TW-Klasse | direkt als Klasse |
+| Farbkontext | `''`, `base`, `alt`, `inverse`, `primary`, `secondary` | `data-surface="…"` auf dem Zell-Element (leer → kein Attribut); siehe „Farbkontext" |
 | Hintergrundbild | Dateiname | `background-image` Style + Focuspoint |
 | Hintergrundvideo | Dateiname | `.video-docker` |
 | Animation | animate.css-Klasse + Verzögerung + Dauer | `x-intersect-class.once="animate__animated …"` (setzt animate.css + `alpinejs-intersect-class` voraus) |

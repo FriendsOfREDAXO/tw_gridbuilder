@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.18.2
+ * @version 2.20.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -104,6 +104,19 @@ function pb_link_href(array $obj): string {
 }
 endif;
 
+// Helfer: Farbkontext-Attribut. 'surface' = '' | base | alt | inverse | primary
+// | secondary. Gibt ' data-surface="…"' zurück (führendes Leerzeichen) oder ''.
+// Leerer/unbekannter Wert → kein Attribut → unverändertes bisheriges Markup.
+// Wirkung nur mit passendem Projekt-CSS – siehe docs/farbkontext.md.
+if (!function_exists('pb_surface_attr')) :
+function pb_surface_attr(array $obj): string {
+    $v = (string)($obj['surface'] ?? '');
+    return in_array($v, ['base', 'alt', 'inverse', 'primary', 'secondary'], true)
+        ? ' data-surface="' . $v . '"'
+        : '';
+}
+endif;
+
 // Helfer: Außen-Abstand (margin) gesetzt? Für Backend-Tags.
 if (!function_exists('pb_has_margin')) :
 function pb_has_margin(array $obj): bool {
@@ -131,6 +144,7 @@ if (rex::isBackend()) {
         if (pb_radius_classes($pb_row) !== '')                                           $pb_tags[] = '<i class="rex-icon fa fa-circle-notch"></i> Ecken';
         if (!empty($pb_row['shadow_hover']))                                              $pb_tags[] = '<i class="rex-icon fa fa-square-o"></i> Hover-Schatten';
         if (!empty($pb_row['divider']))                                                   $pb_tags[] = '<i class="rex-icon fa fa-minus"></i> Trennlinie';
+        if (!empty($pb_row['surface']))                                                   $pb_tags[] = '<i class="rex-icon fa fa-adjust"></i> ' . htmlspecialchars($pb_row['surface']);
         if (pb_custom_class($pb_row) !== '')                                              $pb_tags[] = '.' . htmlspecialchars(pb_custom_class($pb_row), ENT_QUOTES);
         if (pb_anim_label($pb_row) !== '')                                                $pb_tags[] = '<i class="rex-icon fa fa-magic"></i> ' . htmlspecialchars(pb_anim_label($pb_row), ENT_QUOTES);
         if (pb_link_href($pb_row) !== '')                                                 $pb_tags[] = '<i class="rex-icon fa fa-link"></i> ' . htmlspecialchars((string)($pb_row['link_label'] ?? '') ?: ('Artikel ' . (string)($pb_row['link'] ?? '')), ENT_QUOTES);
@@ -155,6 +169,7 @@ if (rex::isBackend()) {
             // Links: Span + Medien-Tags
             $pb_cell_left = [];
             if (!empty($pb_cell['bg']))       $pb_cell_left[] = htmlspecialchars($pb_cell['bg']);
+            if (!empty($pb_cell['surface']))  $pb_cell_left[] = '<i class="rex-icon fa fa-adjust"></i> ' . htmlspecialchars($pb_cell['surface']);
             if (!empty($pb_cell['bg_image'])) $pb_cell_left[] = '<i class="rex-icon fa fa-image"></i> ' . htmlspecialchars($pb_cell['bg_image']);
             if (!empty($pb_cell['bg_video'])) $pb_cell_left[] = '<i class="rex-icon fa fa-film"></i> ' . htmlspecialchars($pb_cell['bg_video']);
             // Rechts: Layout-Tags
@@ -292,6 +307,9 @@ foreach ($pb_data['rows'] as $row) {
     $row_custom_class = pb_custom_class($row);
     $row_anim_attr    = pb_anim_attr($row); // Animation auf inneren Container
     $row_link_href    = pb_link_href($row); // ganze Zeile als interner Link
+    // Farbkontext: auf dasselbe Element wie der Hintergrund (Section bei voller
+    // Breite, sonst innerer Container), damit Schrift-/Linkfarben dort erben.
+    $row_surface_attr = pb_surface_attr($row);
 
     $container_classes = implode(' ', array_filter([
         $inner_width,
@@ -309,13 +327,13 @@ foreach ($pb_data['rows'] as $row) {
     $row_tag       = $row_link_href ? 'a' : 'div';
     $row_href_attr = $row_link_href ? ' href="' . htmlspecialchars($row_link_href, ENT_QUOTES) . '"' : '';
 
-    echo '<section class="' . $section_classes . '"' . ($bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . '>';
+    echo '<section class="' . $section_classes . '"' . ($bg_on_section ? $row_surface_attr : '') . ($bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . '>';
 
     if ($bg_on_section && $bg_video) {
         echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
     }
 
-    echo '<' . $row_tag . ' class="' . $container_classes . '"' . $row_href_attr . (!$bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . ($row_anim_attr ? ' ' . $row_anim_attr : '') . '>';
+    echo '<' . $row_tag . ' class="' . $container_classes . '"' . $row_href_attr . (!$bg_on_section ? $row_surface_attr : '') . (!$bg_on_section && $bg_image ? ' style="' . pb_bg_image_style($bg_image) . '"' : '') . ($row_anim_attr ? ' ' . $row_anim_attr : '') . '>';
 
     if (!$bg_on_section && $bg_video) {
         echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
@@ -391,6 +409,7 @@ foreach ($pb_data['rows'] as $row) {
         $cell_tag          = $cell_link_href ? 'a' : 'div';
         $cell_href_attr    = $cell_link_href ? ' href="' . htmlspecialchars($cell_link_href, ENT_QUOTES) . '"' : '';
         $cell_style = $cell_bg_image ? ' style="' . pb_bg_image_style($cell_bg_image) . '"' : '';
+        $cell_surface_attr = pb_surface_attr($cell);
 
         $cell_classes = array_filter([
             'col-span-' . $span,
@@ -414,7 +433,7 @@ foreach ($pb_data['rows'] as $row) {
             'twgb-cell--span-' . $span,
         ]);
 
-        echo '<' . $cell_tag . ' class="' . implode(' ', $cell_classes) . '"' . $cell_href_attr . $cell_style . ($cell_anim_attr ? ' ' . $cell_anim_attr : '') . '>';
+        echo '<' . $cell_tag . ' class="' . implode(' ', $cell_classes) . '"' . $cell_href_attr . $cell_surface_attr . $cell_style . ($cell_anim_attr ? ' ' . $cell_anim_attr : '') . '>';
 
         if ($cell_bg_video) {
             echo '<div class="video-docker"><video src="' . htmlspecialchars(rex_url::media($cell_bg_video), ENT_QUOTES) . '" type="video/mp4" autoplay muted loop playsinline></video></div>';
