@@ -53,7 +53,9 @@ Klassenlisten mehr.
   Versionen vor 2.20.0.
 
 Das Feld **Hintergrundfarbe** (`bg-*`-Utility) und **Farbkontext** (`data-surface`)
-sind unabhängig. `bg` malt den Hintergrund, `data-surface` steuert die Schrift.
+sind unabhängig. `bg` malt den Hintergrund, `data-surface` steuert Schrift, Links
+und Buttons. Der Hintergrund von `data-surface` greift nur, wenn **keine** `bg-*`-Klasse
+am selben Element sitzt (z. B. `bg-primary-500` + „Dunkel" = roter Grund, helle Schrift).
 
 ---
 
@@ -161,7 +163,7 @@ In deine zentrale CSS-Datei (die mit `@import "tailwindcss";`). Passe nur den
 
 Wenn du `data-surface="primary|secondary|inverse"` nutzt, malt die Regel oben den
 Hintergrund bereits. Setzt du im Panel **zusätzlich** eine „Hintergrundfarbe"
-(`bg-*`), gewinnt die Tailwind-Utility – lass das `bg`-Feld dann auf „Transparent".
+(`bg-*`), gewinnt die `bg-*`-Klasse (Regel `revert-layer` in `surface-context.css`).
 
 ### Optional: Kompat-Shim für bestehende dunkle `bg-*`-Flächen
 
@@ -271,3 +273,38 @@ Pro Farbkontext { Automatisch, alt, inverse, primary, secondary }:
 Ist im Projekt kein `data-surface`-CSS hinterlegt, hat das Attribut **keine
 Wirkung** (kein Fehler). Die Panel-Auswahl „Automatisch" verhält sich exakt wie
 frühere GridBuilder-Versionen.
+
+
+---
+
+## 10. hotelpost-ffb: Umsetzung (`theme/private/styles/surface-context.css`)
+
+Eine Datei setzt pro Kontext nur Variablen; Module lesen nur diese.
+Variablen: `--surface-fg/-muted/-link/-link-hover/-accent/-accent-2/-light`
+und `--btn-{p,s,l,d}-{bg,fg,bd,hbg,hfg,oc}` (p = primary, s = secondary,
+l = light, d = dark; oc = Outline-Farbe).
+
+**Ermittlung:** `data-surface` an Zelle > `data-surface` an Zeile > bg-Klasse
+(Auto-Liste, `:where()` = Spezifität 0) > base. Verschachtelung klappt, weil jeder
+Kontext *alle* Variablen neu setzt.
+
+| Hintergrund-Klasse (ohne data-surface) | Kontext |
+|---|---|
+| `bg-white`, `bg-neutral/gray-50…300`, `bg-cream-50…500`, `bg-primary-50…200`, `bg-secondary-50…200` | hell (base/alt) |
+| `bg-black`, `bg-neutral/gray-700…950` | inverse |
+| `bg-primary-400…950` | primary |
+| `bg-secondary-500…950` | secondary |
+| Hintergrundbild (`style="background-image…"`) | inverse + 70 % Abdunklung |
+
+Nicht in der Liste (z. B. `bg-secondary-300/400`, `bg-neutral-400…600`): immer `data-surface` setzen.
+Gleiche Wirkung hat `data-surface="base|alt"` + Bild: keine Abdunklung – dann bewusst helle Bilder wählen.
+
+**Überschriften (Modul 0210)** `text-ink`/`text-primary-500`/`text-secondary-500`/`text-white`
+werden pro Kontext umgemappt (z. B. „Primär" auf Schwarz/Rot = helles Rosé `primary-200`, „Hell" auf Weiß = Schwarz).
+
+**Buttons** (alle 10 Typen): je Kontext andere Ersatzfarben, z. B. primary-Fläche:
+`btn-primary-solid` = weiß mit roter Schrift, `btn-primary-outline` = weißer Rahmen.
+Auf heller Fläche sind `btn-light-*` und `btn-dark-*` beide dunkel (ink), auf dunkler Fläche beide weiß.
+
+**Kontrast:** `on-primary` 9.1:1, `on-secondary` 8.9:1, `primary` auf weiß 9.1:1; Dunkel-Akzente
+`primary-200` ≥ 5.2:1 und `secondary-200` ≥ 5.8:1 auf ink/primary/secondary.

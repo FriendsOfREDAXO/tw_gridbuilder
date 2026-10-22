@@ -30,3 +30,17 @@ if (rex_string::versionCompare($this->getVersion(), '2.20.0', '<')) {
         . 'Anleitung inkl. Copy-Paste-CSS in <code>redaxo/src/addons/tw_gridbuilder/docs/farbkontext.md</code>.'
     );
 }
+
+if (rex_string::versionCompare($this->getVersion(), '2.21.0', '<')) {
+    $this->setProperty(
+        'successmsg',
+        '<br><strong>Updatehinweis TW GridBuilder 2.21.0:</strong> '
+        . 'Neues, optionales Frontend-Editing („Inhalte bearbeiten“), standardmäßig <strong>aus</strong> '
+        . '(Addon-Config <code>frontend_edit</code> = 1 zum Aktivieren). Dafür bitte '
+        . '<code>module/output.php</code> der bestehenden GridBuilder-Moduldefinition auf Version '
+        . '<strong>2.21.0</strong> aktualisieren (nur den Code ersetzen, Modul nicht neu anlegen). '
+        . 'Ohne diese Aktualisierung und ohne aktivierte Config ändert sich nichts; gespeicherte '
+        . 'Slice-Inhalte und <code>REX_VALUE[1]</code> bleiben unverändert. Module werden über das Flag '
+        . '<code>frontend_edit = "1"</code> im Input freigegeben – siehe README, Abschnitt „Frontend-Editing“.'
+    );
+}

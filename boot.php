@@ -36,6 +36,9 @@ if (!rex::isBackend()) {
             @copy($source, $cssOutputPath);
         }
     }
+    // ── Frontend-Editing (optional, Config `frontend_edit` = 1; Rückbau: Config auf 0) ──
+    rex_api_function::register('twgb_fe', \FriendsOfRedaxo\TwGridBuilder\FrontendApi::class);
+    rex_extension::register('OUTPUT_FILTER', static fn (rex_extension_point $ep) => \FriendsOfRedaxo\TwGridBuilder\Frontend::injectAssets($ep->getSubject()));
     return;
 }
 

@@ -18,6 +18,18 @@ Verbindliche Regeln für jede Weiterentwicklung:
 
 ---
 
+## Updatehinweis für 2.21.0
+
+Neues, optionales **Frontend-Editing** (standardmäßig aus, siehe Abschnitt „Frontend-Editing“).
+Das JSON-Format in `REX_VALUE[1]` ist unverändert, es findet keine Datenmigration statt. Bestehende
+Seiten rendern nach dem reinen AddOn-Update unverändert weiter.
+
+Damit das Frontend-Editing funktioniert, bitte in der bestehenden GridBuilder-Moduldefinition
+**„0100 – Standard (TW GridBuilder)“** den **Output** durch `module/output.php` (Modulversion **2.21.0**)
+ersetzen – nur den Code ersetzen, das Modul nicht löschen oder neu anlegen. Ohne diese Aktualisierung und
+ohne aktivierte Config ändert sich nichts. Projektspezifische Anpassungen am Output vorher prüfen: Neu ist
+nur der Slot-Wrapper im Frontend-Zweig (`Frontend::open(...)`).
+
 ## Updatehinweis für 2.14.0
 
 Die gespeicherten Inhalte sind vollständig abwärtskompatibel: Das JSON-Format
@@ -114,10 +126,14 @@ tw_gridbuilder/
 ├── assets/
 │   ├── tw-gridbuilder.js          # Backend-UI (Vue 3)
 │   ├── tw-gridbuilder.css         # Backend-Styles
-│   └── tw-gridbuilder-grid.css    # Safelist (@source) + Custom-CSS; benötigt Tailwind-v4-Build
+│   ├── tw-gridbuilder-grid.css    # Safelist (@source) + Custom-CSS; benötigt Tailwind-v4-Build
+│   ├── tw-gridbuilder-fe.js       # Frontend-Editing (Button, Panel, Live-Vorschau, Pickers, CKEditor)
+│   └── tw-gridbuilder-fe.css      # Styles des Frontend-Editing-Panels (liegt im Shadow DOM/iframe)
 ├── lib/
 │   ├── TwGridBuilderApi.php       # AJAX-API: Modul-Formulare & Previews
-│   └── TwGridBuilderHelper.php    # REX_VALUE/REX_MEDIA Token-Auflösung
+│   ├── TwGridBuilderHelper.php    # REX_VALUE/REX_MEDIA Token-Auflösung
+│   ├── TwGridBuilderFrontend.php  # Frontend-Editing: Aktivierung, Modul-Flag, Slot-Wrapper, Assets
+│   └── TwGridBuilderFrontendApi.php # Frontend-Editing: API `twgb_fe` (Formular, Vorschau, Speichern, Medien-/Artikelsuche)
 ├── module/
 │   ├── input.php                  # Modul-Input (Kopiervorlage)
 │   └── output.php                 # Modul-Output (Kopiervorlage)
@@ -516,6 +532,136 @@ rex_addon::get('tw_gridbuilder')->setConfig(
 Leer lassen oder auf `''` setzen um das Kopieren zu deaktivieren.
 
 ---
+
+## Frontend-Editing
+
+Seit 2.21.0 können eingeloggte Backend-User Inhalte von Modulen im Grid direkt im Frontend ändern
+(„Inhalte bearbeiten“). Das **Layout** (Zeilen, Zellen, Abstände, Hintergründe) bleibt dem Backend
+vorbehalten. Gespeichert wird nur der geänderte Slot, per Merge in das vorhandene Layout-JSON –
+das Datenformat ist unverändert und voll abwärtskompatibel.
+
+### Aktivieren
+
+Das Feature ist standardmäßig **aus**. Aktivieren per Addon-Config:
+
+```php
+rex_addon::get('tw_gridbuilder')->setConfig('frontend_edit', 1);
+```
+
+Ausschalten: Wert auf `0`. Ohne Config, ohne Backend-Session oder ohne Modul-Flag ändert sich an
+der Ausgabe nichts. Voraussetzung: das GridBuilder-Modul **„0100 – Standard (TW GridBuilder)“** ist auf
+Version 2.21.0 aktualisiert (siehe Updatehinweis unten).
+
+### Bedienung
+
+Im Frontend mit der Backend-Session eingeloggt sein → Button **„Inhalte bearbeiten“** (unten mittig) →
+Slot anklicken → Panel mit dem Modulformular. Änderungen erscheinen sofort als **Live-Vorschau**
+(ohne zu speichern); **Speichern** schreibt in die Datenbank, Schließen ohne Speichern verwirft die
+Vorschau. Der Bearbeiten-Modus bleibt pro Browser-Tab erhalten, bis „Fertig“ gewählt wird.
+
+Berechtigung: Es gelten die **Modulrechte** des Users und die **Strukturrechte** des Artikels; alle
+Aufrufe sind CSRF-geschützt. Button und Panel liegen in einem Shadow DOM, das Formular in einem
+iframe – das Seiten-CSS wirkt nicht hinein.
+
+### Ein Modul für das Frontend-Editing freigeben
+
+Nur Module mit dem Flag `frontend_edit = "1"` im Input sind im Frontend änderbar. Alle anderen
+verhalten sich unverändert. Das Flag steht im Kommentarblock `base-module-config` oder – bei Modulen
+ohne diesen Header – als eigener Kommentarblock mit der Zeile `frontend_edit = "1"` (eigene Zeile,
+innerhalb der ersten ca. 1500 Zeichen des Inputs). Das AddOn liest es direkt aus dem gespeicherten
+Modul-Input; es sind keine weiteren Dateien oder Einstellungen nötig.
+
+**Beispiel – Modul „Hinweisbox“**
+
+Input:
+
+```php
+<?php
+/* base-module-config
+modulname = "Hinweisbox"
+modulkey = "Hinweisbox"
+requirements = "base,mform,cke5"
+status = "1"
+version = "1.0.0"
+frontend_edit = "1"
+base-module-config
+*/
+/* tw_gridblock kompatibel */
+use FriendsOfRedaxo\MForm;
+
+$id = 1;
+
+echo MForm::factory()
+    ->addTextField("$id.headline", ['label' => 'Überschrift', 'full' => true])
+    ->addSelectField("$id.style", ['info' => 'Info', 'warn' => 'Warnung'], ['label' => 'Stil', 'full' => true])
+    ->addTextAreaField("$id.text", ['label' => 'Text', 'class' => 'cke5-editor', 'data-profile' => 'base', 'full' => true])
+    ->addMediaField(1, ['label' => 'Bild', 'full' => true])
+    ->addCustomLinkField(2, ['label' => 'Link', 'data-intern' => 'enable', 'data-extern' => 'enable', 'full' => true])
+    ->show();
+```
+
+Output (unverändert zu jedem anderen GridBuilder-Modul, `REX_VALUE[1]` enthält die Textfelder,
+`REX_MEDIA[1]` das Bild, `REX_VALUE[2]` den Link):
+
+```php
+<?php
+$box   = rex_var::toArray('REX_VALUE[1]');
+$image = 'REX_MEDIA[1]';
+$link  = 'REX_VALUE[2]';
+?>
+<div class="hinweisbox hinweisbox--<?= rex_escape($box['style'] ?? 'info') ?>">
+    <h3><?= rex_escape($box['headline'] ?? '') ?></h3>
+    <?= $box['text'] ?? '' ?>
+</div>
+```
+
+Das Modul muss dafür **nichts weiter wissen**: kein eigenes JavaScript, kein Frontend-Zweig.
+
+### Unterstützte Felder
+
+| Feld | Im Frontend |
+|---|---|
+| Text, Zahl, E-Mail, Datum | ja |
+| Textarea | ja; mit Klasse `cke5-editor` als **CKEditor 5** (siehe unten) |
+| Select, Radio, Checkbox | ja (Select als einfache Auswahlliste, kein Bootstrap-Select) |
+| Spalten, Fieldsets, Hinweistexte | ja (Spalten: verschachtelte Spalten stehen nebeneinander, äußere untereinander) |
+| MForm-Tabs | ja – die Tabs stehen **untereinander**, der Tab-Titel dient als Überschrift |
+| MForm-Flex-Repeater | ja – als Listen-Editor (Karten mit Hinzufügen, Verschieben ↑↓, Entfernen); Format (Liste und `__v`-Hülle) und unbekannte Felder pro Eintrag bleiben erhalten |
+| Medienfeld (`addMediaField`) | ja – Auswahl aus dem Medienpool (nur Bilder, Suche, Kategorie-Filter, „Mehr laden“; es zählen die Medienpool-Rechte des Users) |
+| Linkfeld (`addCustomLinkField`) | ja – freie URL / `mailto:` / `tel:` tippen oder einen Online-Artikel wählen (Wert `redaxo://ID`) |
+| Medienliste, Linkliste, verschachtelte Repeater | nein – erscheinen nicht im Panel, die gespeicherten Werte bleiben aber erhalten |
+| Eigenes JavaScript im Input (`<script>`) | nein – Skripte laufen im Panel nicht |
+
+**Einzelne Felder ausblenden:** Ein Feld mit dem Attribut `'data-fe' => '0'` erscheint im Frontend
+nicht; sein gespeicherter Wert bleibt beim Speichern erhalten (es wird immer *gemerged*, nie ersetzt).
+
+```php
+->addTextField("$id.css_class", ['label' => 'CSS-Klasse', 'data-fe' => '0'])
+```
+
+**Hinweis zu Modulen mit JavaScript-Logik** (z. B. Felder, die per Skript ein-/ausgeblendet werden):
+Im Frontend sind dann alle Felder sichtbar. Solche Module besser nicht freigeben oder die
+betroffenen Felder mit `data-fe="0"` ausblenden.
+
+### Besonderheiten bei CKEditor 5 (`cke5-editor`)
+
+- **Derselbe Editor wie im Backend:** Textfelder mit der Klasse `cke5-editor` bekommen im Frontend den
+  echten cke5-Editor mit dem **Profil aus `data-profile`** (Toolbar, Tabellen, Farben, Listen, Links …).
+  Es wird dazu derselbe Stack wie im Backend geladen (jQuery, CKEditor-Build, Übersetzungen, die
+  cke5-Plugins, `cke5profiles.js`, `cke5.js`), und zwar lazy, nur im iframe des Panels und nur, wenn
+  das Formular ein solches Feld enthält (rund 2 MB beim ersten Öffnen). Da das Profil gilt, entspricht das
+  gespeicherte HTML dem aus dem Backend – eigene Profile funktionieren ohne Anpassung.
+- **Voraussetzung:** das cke5-AddOn ist installiert und aktiv. Ohne cke5 (oder wenn der Editor nicht laden
+  kann) bleibt das Feld eine einfache Textarea mit dem rohen HTML; im Panel erscheint ein Hinweis.
+- **Was im Frontend nicht geht:** Funktionen, die ein Backend-Fenster öffnen – z. B. interne Links über die
+  Linkmap (`rexlink`), Bilder aus dem Medienpool, Snippets. Externe Links, Formatierung, Tabellen und
+  Farben funktionieren. Wer interne Verlinkungen oder Medien im Text pflegt, nutzt dafür das Backend.
+- Die Live-Vorschau läuft bei jeder Änderung; der Inhalt wird beim Speichern aus dem Editor übernommen.
+
+### Rückbau
+
+Config `frontend_edit` auf `0` setzen (oder das Flag aus dem Modul-Input entfernen). Es werden keine
+Daten verändert, die gespeicherten Inhalte bleiben unberührt.
 
 ## Sicherheit
 

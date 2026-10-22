@@ -2,7 +2,7 @@
 /**
  * TW GridBuilder — Modul-Output
  * Rendert das Grid mit den enthaltenen Modulen.
- * @version 2.20.0
+ * @version 2.21.0
  */
 
 // rex_var::parse ersetzt REX_VALUE[1] – Sentinel-Check über Konkatenation vermeiden,
@@ -455,10 +455,12 @@ foreach ($pb_data['rows'] as $row) {
             if ($mod_sql->getRows() === 0) continue;
 
             $code = \FriendsOfRedaxo\TwGridBuilder\Helper::injectValues($mod_sql->getValue('output'), $values);
+            // Frontend-Editing: Wrapper nur, wenn aktiv + Modul freigegeben (sonst leer = Output unverändert)
+            $fe_open = rex::isBackend() ? '' : \FriendsOfRedaxo\TwGridBuilder\Frontend::open((int) 'REX_SLICE_ID', (string) ($cell['id'] ?? ''), (string) ($slot['id'] ?? ''), $module_id);
             try {
                 ob_start();
                 eval('?>' . $code);
-                echo ob_get_clean();
+                echo $fe_open . ob_get_clean() . ($fe_open ? '</div>' : '');
             } catch (\Throwable $e) {
                 ob_end_clean();
                 rex_logger::logException($e);

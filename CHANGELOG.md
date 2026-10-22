@@ -1,5 +1,39 @@
 # Changelog — TW GridBuilder
 
+## [2.21.0] — 2026-10-22
+
+### Feature — Frontend-Editing („Inhalte bearbeiten")
+
+Eingeloggte Backend-User können Inhalte von Modulen im Grid direkt im Frontend ändern –
+Layout (Zeilen, Zellen, Abstände, Hintergründe) bleibt dem Backend vorbehalten.
+
+- **Aktivieren:** Addon-Config `frontend_edit` = `1` (Default: aus), z. B.
+  `rex_addon::get('tw_gridbuilder')->setConfig('frontend_edit', 1);`
+  Ausschalten: Wert auf `0`. Ohne Config, ohne Backend-Session oder ohne Modul-Flag ändert sich
+  an der Ausgabe nichts.
+- **Modul freigeben:** im Kommentarblock `base-module-config` des Modul-Inputs
+  `frontend_edit = "1"` setzen (oder, ohne Header, als eigener Block `/* frontend_edit = "1" */`).
+  Das Flag wird aus dem gespeicherten Modul-Input gelesen. Zusätzlich gelten die Modulrechte
+  des Users und die Strukturrechte des Artikels.
+- **Ablauf:** Button „Inhalte bearbeiten" (unten mittig) → Slot anklicken → Panel mit dem
+  Modulformular → Live-Vorschau beim Tippen (ohne Speichern) → „Speichern". Gespeichert wird nur
+  der geänderte Slot, per Merge in das vorhandene Layout-JSON (Datenformat unverändert);
+  ausgeblendete Felder bleiben erhalten. Der Bearbeiten-Modus bleibt pro Tab erhalten.
+- **Kapselung:** Button und Panel liegen in einem Shadow DOM, das Formular in einem iframe –
+  das Seiten-CSS wirkt nicht hinein.
+- **Feldtypen:** Text, Textarea, Select, Radio, Checkbox; MForm-Tabs (untereinander) und
+  Spalten; MForm-Flex-Repeater (Listen-Editor); Fließtext mit dem **echten cke5-Editor** (derselbe
+  Stack und das Profil aus `data-profile` wie im Backend: Tabellen, Farben, Links …; nur Funktionen mit
+  Backend-Fenstern wie Linkmap/Medienpool im Text fehlen); Bild-Auswahl aus dem Medienpool (Suche, Kategorie-Filter,
+  „Mehr laden") und Link-Auswahl (Online-Artikel, freie URL, `mailto:`, `tel:`). Medienlisten
+  und Linklisten sind im Frontend nicht änderbar.
+- **Neue Dateien:** `lib/TwGridBuilderFrontend.php`, `lib/TwGridBuilderFrontendApi.php`
+  (API `twgb_fe`), `assets/tw-gridbuilder-fe.js`, `assets/tw-gridbuilder-fe.css`.
+- **Geändert:** `boot.php` (Frontend-Zweig: API + Asset-Hook), `module/output.php`
+  (Slot-Wrapper nur bei aktivem Frontend-Editing).
+- Das GridBuilder-Modul (`module/output.php`) muss in den Projekten auf Version 2.21.0
+  aktualisiert werden.
+
 ## [2.20.0] — 2026-09-04
 
 ### Feature — Farbkontext pro Zeile und Zelle (`data-surface`)
